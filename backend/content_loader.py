@@ -1,5 +1,4 @@
 import os
-import markdown
 
 def load_content(vulnerability_id):
     """Load markdown content for a vulnerability"""
