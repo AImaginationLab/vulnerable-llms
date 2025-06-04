@@ -1,3 +1,69 @@
+/* ============================================================================
+   CSS VARIABLES FOR THEMING
+   ============================================================================ */
+:root {
+  /* Light theme (default) */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --bg-tertiary: #e9ecef;
+  --text-primary: #333333;
+  --text-secondary: #495057;
+  --text-muted: #6c757d;
+  --border-color: #e9ecef;
+  --accent-color: #007bff;
+  --danger-color: #dc3545;
+  --danger-bg: #f8d7da;
+  --danger-border: #f5c6cb;
+  --danger-text: #721c24;
+  --success-color: #28a745;
+  --warning-color: #ffc107;
+  
+  /* Animation variables */
+  --transition-speed: 0.3s;
+  --glow-effect: none;
+}
+
+/* ============================================================================
+   HACKER MODE THEME VARIABLES
+   ============================================================================ */
+.theme-hacker {
+  --bg-primary: #000000;
+  --bg-secondary: #0a0a0a;
+  --bg-tertiary: #1a1a1a;
+  --text-primary: #00ff00;
+  --text-secondary: #00cc00;
+  --text-muted: #009900;
+  --border-color: #00ff00;
+  --accent-color: #00ffff;
+  --danger-color: #ff0066;
+  --danger-bg: #1a0a0a;
+  --danger-border: #ff0066;
+  --danger-text: #ff6699;
+  --success-color: #00ff00;
+  --warning-color: #ffff00;
+  --glow-effect: 0 0 10px var(--text-primary);
+}
+
+/* ============================================================================
+   DARK MODE THEME VARIABLES
+   ============================================================================ */
+.theme-dark {
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #2d2d2d;
+  --bg-tertiary: #3d3d3d;
+  --text-primary: #ffffff;
+  --text-secondary: #b0b0b0;
+  --text-muted: #808080;
+  --border-color: #444444;
+  --accent-color: #007bff;
+  --danger-color: #dc3545;
+  --danger-bg: #4a2c2c;
+  --danger-border: #6b3636;
+  --danger-text: #ff9999;
+  --success-color: #28a745;
+  --warning-color: #ffc107;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -9,8 +75,16 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #f5f5f5;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
   line-height: 1.6;
+  transition: all var(--transition-speed) ease;
+}
+
+/* HACKER MODE FONT */
+.theme-hacker body {
+  font-family: 'Courier New', 'Monaco', 'Lucida Console', monospace;
+  text-shadow: var(--glow-effect);
 }
 
 .container {
@@ -21,14 +95,16 @@ body {
 
 .sidebar {
   width: 280px;
-  background: white;
+  background: var(--bg-primary);
   position: fixed;
   left: 0;
   top: 0;
   height: 100vh;
   overflow-y: auto;
-  box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+  box-shadow: 2px 0 5px rgba(0,0,0,0.3);
   padding: 20px;
+  border-right: 1px solid var(--border-color);
+  transition: all var(--transition-speed) ease;
 }
 
 .main-content {
@@ -50,25 +126,28 @@ body {
   display: block;
   padding: 12px 16px;
   text-decoration: none;
-  color: #333;
-  background: #f8f9fa;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
   border-radius: 6px;
-  border-left: 4px solid #e9ecef;
-  transition: all 0.2s ease;
+  border-left: 4px solid var(--border-color);
+  transition: all var(--transition-speed) ease;
+  text-shadow: var(--glow-effect);
 }
 
 .vulnerability-link:hover {
-  background: #e9ecef;
-  border-left-color: #007bff;
-  color: #007bff;
+  background: var(--bg-tertiary);
+  border-left-color: var(--accent-color);
+  color: var(--accent-color);
+  box-shadow: var(--glow-effect);
 }
 
 .vulnerability-link.has-demo {
-  border-left-color: #28a745;
+  border-left-color: var(--success-color);
 }
 
 .vulnerability-link.has-demo:hover {
-  border-left-color: #20c997;
+  border-left-color: var(--success-color);
+  filter: brightness(1.2);
 }
 
 .demo-badge {
@@ -94,18 +173,32 @@ body {
 }
 
 .demo-section {
-  background: white;
+  background: var(--bg-primary);
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 20px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  border: 1px solid var(--border-color);
+  transition: all var(--transition-speed) ease;
 }
 
-.demo-section h3 {
+.card-container {
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  border: 1px solid var(--border-color);
+  transition: all var(--transition-speed) ease;
+}
+
+.demo-section h3,
+.card-container h3 {
   margin-top: 0;
-  color: #333;
-  border-bottom: 2px solid #e9ecef;
+  color: var(--text-primary);
+  border-bottom: 2px solid var(--border-color);
   padding-bottom: 10px;
+  text-shadow: var(--glow-effect);
 }
 
 .input-area {
@@ -116,23 +209,27 @@ body {
   display: block;
   margin-bottom: 8px;
   font-weight: bold;
-  color: #555;
+  color: var(--text-primary);
 }
 
 .input-area textarea {
   width: 100%;
   min-height: 120px;
   padding: 12px;
-  border: 2px solid #e9ecef;
+  border: 2px solid var(--border-color);
   border-radius: 6px;
   font-family: monospace;
   font-size: 14px;
   resize: vertical;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transition: all var(--transition-speed) ease;
 }
 
 .input-area textarea:focus {
   outline: none;
-  border-color: #007bff;
+  border-color: var(--accent-color);
+  box-shadow: var(--glow-effect);
 }
 
 .demo-button {
@@ -161,8 +258,8 @@ body {
 }
 
 .output-panel {
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   padding: 16px;
   margin-bottom: 16px;
@@ -170,25 +267,28 @@ body {
   font-size: 14px;
   white-space: pre-wrap;
   word-break: break-word;
+  color: var(--text-primary);
+  transition: all var(--transition-speed) ease;
 }
 
 .output-panel h4 {
   margin-top: 0;
   margin-bottom: 12px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-  color: #495057;
+  color: var(--text-primary);
   font-size: 16px;
 }
 
 .highlight-sensitive {
-  background-color: #ffeaa7;
+  background-color: var(--warning-color);
+  color: var(--bg-primary);
   padding: 2px 4px;
   border-radius: 3px;
   font-weight: bold;
 }
 
 .highlight-injected {
-  background-color: #ff7675;
+  background-color: var(--danger-color);
   color: white;
   padding: 2px 4px;
   border-radius: 3px;
@@ -196,21 +296,21 @@ body {
 }
 
 .alert-success {
-  background: #d4edda;
-  border: 1px solid #c3e6cb;
-  color: #155724;
+  background: var(--success-color);
+  color: white;
   padding: 12px;
   border-radius: 6px;
   margin-bottom: 16px;
+  border: 1px solid var(--border-color);
 }
 
 .alert-danger {
-  background: #f8d7da;
-  border: 1px solid #f5c6cb;
-  color: #721c24;
+  background: var(--danger-color);
+  color: white;
   padding: 12px;
   border-radius: 6px;
   margin-bottom: 16px;
+  border: 1px solid var(--border-color);
 }
 
 .loading {
@@ -268,4 +368,527 @@ body {
   background: #f8d7da;
   text-decoration: line-through;
   opacity: 0.6;
+}
+
+/* ============================================================================
+   THEME TOGGLE STYLES
+   ============================================================================ */
+.theme-toggle {
+  margin-bottom: 20px;
+}
+
+.theme-selector {
+  display: flex;
+  gap: 8px;
+  flex-direction: column;
+}
+
+.theme-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all var(--transition-speed) ease;
+  font-family: inherit;
+}
+
+.theme-button:hover {
+  background: var(--bg-tertiary);
+  box-shadow: var(--glow-effect);
+}
+
+.theme-button.active {
+  background: var(--accent-color);
+  color: var(--bg-primary);
+  border-color: var(--accent-color);
+  font-weight: bold;
+}
+
+.theme-hacker .theme-button.active {
+  color: var(--bg-primary);
+  text-shadow: none;
+}
+
+.theme-icon {
+  font-size: 16px;
+}
+
+.theme-name {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ============================================================================
+   ATTACK LEVEL SELECTOR STYLES
+   ============================================================================ */
+.attack-level-selector {
+  margin-bottom: 24px;
+  padding: 20px;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.level-header {
+  margin-bottom: 16px;
+}
+
+.level-header h4 {
+  margin: 0 0 4px 0;
+  color: var(--text-primary);
+  text-shadow: var(--glow-effect);
+}
+
+.level-header p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.level-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.level-button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: var(--bg-primary);
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all var(--transition-speed) ease;
+  font-family: inherit;
+  color: var(--text-primary);
+}
+
+.level-button:hover {
+  border-color: var(--level-color, var(--accent-color));
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2), var(--glow-effect);
+}
+
+.level-button.active {
+  border-color: var(--level-color);
+  background: var(--bg-tertiary);
+  box-shadow: 0 0 15px var(--level-color);
+}
+
+.theme-hacker .level-button.active {
+  animation: hackerglow 2s ease-in-out infinite alternate;
+}
+
+@keyframes hackerglow {
+  from { box-shadow: 0 0 15px var(--level-color); }
+  to { box-shadow: 0 0 25px var(--level-color), 0 0 35px var(--level-color); }
+}
+
+.level-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.level-info {
+  flex: 1;
+}
+
+.level-name {
+  font-weight: bold;
+  font-size: 16px;
+  margin-bottom: 4px;
+  color: var(--text-primary);
+}
+
+.level-description {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+
+.level-active-indicator {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 20px;
+  height: 20px;
+  background: var(--success-color);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+  color: var(--bg-primary);
+}
+
+/* ============================================================================
+   ATTACK ANALYSIS STYLES
+   ============================================================================ */
+.attack-analysis {
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 20px;
+  margin-top: 20px;
+  border: 1px solid var(--border-color);
+}
+
+.analysis-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.analysis-header h4 {
+  margin: 0;
+  color: var(--text-primary);
+  text-shadow: var(--glow-effect);
+}
+
+.success-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.success-icon {
+  font-size: 16px;
+}
+
+.analysis-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.metric-card {
+  padding: 16px;
+  background: var(--bg-primary);
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  text-align: center;
+}
+
+.metric-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.metric-value {
+  font-size: 20px;
+  font-weight: bold;
+  color: var(--text-primary);
+  text-shadow: var(--glow-effect);
+}
+
+.metric-value.risk-level {
+  font-size: 16px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.1);
+}
+
+.analysis-explanation,
+.analysis-evidence,
+.analysis-techniques {
+  margin-bottom: 16px;
+}
+
+.analysis-explanation h5,
+.analysis-evidence h5,
+.analysis-techniques h5 {
+  margin: 0 0 12px 0;
+  color: var(--text-primary);
+  font-size: 14px;
+  text-shadow: var(--glow-effect);
+}
+
+.analysis-explanation p {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.evidence-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.evidence-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.evidence-item:last-child {
+  border-bottom: none;
+}
+
+.evidence-icon {
+  flex-shrink: 0;
+  font-size: 14px;
+}
+
+.evidence-text {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.techniques-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.technique-tag {
+  padding: 4px 12px;
+  background: var(--accent-color);
+  color: var(--bg-primary);
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.theme-hacker .technique-tag {
+  color: var(--bg-primary);
+  text-shadow: none;
+  animation: hackerpulse 3s ease-in-out infinite;
+}
+
+@keyframes hackerpulse {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+}
+
+.security-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background: var(--danger-color);
+  border-radius: 8px;
+  margin-top: 16px;
+  color: white;
+}
+
+.alert-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.alert-content {
+  flex: 1;
+}
+
+.alert-title {
+  font-weight: bold;
+  margin-bottom: 4px;
+  font-size: 16px;
+}
+
+.alert-message {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* ============================================================================
+   HACKER MODE SPECIAL EFFECTS
+   ============================================================================ */
+.theme-hacker {
+  background-image: 
+    linear-gradient(90deg, transparent 98%, var(--text-primary) 100%),
+    linear-gradient(transparent 98%, var(--text-primary) 100%);
+  background-size: 3px 3px;
+  animation: matrix-bg 20s linear infinite;
+}
+
+@keyframes matrix-bg {
+  0% { background-position: 0 0; }
+  100% { background-position: 100px 100px; }
+}
+
+.theme-hacker .demo-section {
+  border: 1px solid var(--border-color);
+  box-shadow: 
+    0 0 10px var(--text-primary),
+    inset 0 0 10px rgba(0, 255, 0, 0.1);
+}
+
+.theme-hacker h1, 
+.theme-hacker h2, 
+.theme-hacker h3 {
+  position: relative;
+}
+
+.theme-hacker h1::before,
+.theme-hacker h2::before,
+.theme-hacker h3::before {
+  content: '> ';
+  color: var(--accent-color);
+  font-weight: bold;
+}
+
+.theme-hacker .demo-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.theme-hacker .demo-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.3), transparent);
+  transition: left 0.5s;
+}
+
+.theme-hacker .demo-button:hover::before {
+  left: 100%;
+}
+
+/* ============================================================================
+   ENHANCED BUTTON STYLES
+   ============================================================================ */
+.demo-button,
+.attack-button {
+  background: var(--danger-color);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all var(--transition-speed) ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.demo-button:hover,
+.attack-button:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.demo-button:disabled,
+.attack-button:disabled {
+  background: var(--text-muted);
+  cursor: not-allowed;
+  transform: none;
+}
+
+.attack-generate-button {
+  background: var(--accent-color);
+  color: white;
+}
+
+.attack-generate-button:hover {
+  background: var(--accent-color);
+  filter: brightness(1.1);
+}
+
+/* ============================================================================
+   LLM RESPONSE VULNERABILITY INDICATORS
+   ============================================================================ */
+.response-vulnerable {
+  padding: 16px;
+  background: #ffebee;
+  border: 2px solid var(--danger-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-family: 'Courier New', monospace;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  position: relative;
+}
+
+.response-vulnerable::before {
+  content: "🚨 COMPROMISED RESPONSE";
+  position: absolute;
+  top: -12px;
+  left: 16px;
+  background: var(--danger-color);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: bold;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.response-safe {
+  padding: 16px;
+  background: #e8f5e8;
+  border: 2px solid var(--success-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-family: 'Courier New', monospace;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  position: relative;
+}
+
+.response-safe::before {
+  content: "✅ SECURE RESPONSE";
+  position: absolute;
+  top: -12px;
+  left: 16px;
+  background: var(--success-color);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: bold;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* Dark theme adjustments */
+.theme-dark .response-vulnerable {
+  background: #2c1810;
+  border-color: var(--danger-color);
+}
+
+.theme-dark .response-safe {
+  background: #0d2818;
+  border-color: var(--success-color);
+}
+
+/* Hacker theme adjustments */
+.theme-hacker .response-vulnerable {
+  background: #220000;
+  border-color: var(--danger-color);
+  box-shadow: 0 0 10px var(--danger-color);
+}
+
+.theme-hacker .response-safe {
+  background: #002200;
+  border-color: var(--success-color);
+  box-shadow: 0 0 10px var(--success-color);
 }
