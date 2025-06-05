@@ -19,18 +19,21 @@ An interactive security testing platform that demonstrates real vulnerabilities 
 - At least 8GB of available RAM (for running Ollama with LLM models)
 
 ## 🏃 Quick Start
-
 ```bash
-# Clone and run
+# Clone the repo
 git clone <repository-url>
 cd vulnerable-llms
-docker-compose up -d
 
-# Access the app
-open http://localhost:3000
+# Production build & run
+cp .env.example .env
+npm run build
+docker-compose -f docker-compose.yml up --build -d
+
+# Access the backend API
+open http://localhost:5000
+
+# Note: first run will download Ollama and the LLM model (~10 minutes).
 ```
-
-That's it! The app will download Ollama and the LLM model automatically (first run takes ~10 minutes).
 
 ## 🎮 What You Can Do
 
@@ -65,23 +68,27 @@ For deeper testing on specific vulnerabilities:
 - Defense recommendations
 
 ## 🛠️ Development
-
+ 
 ### Run in Development Mode
 
 ```bash
-# Use the dev compose file for hot reloading
-docker-compose -f docker-compose.dev.yml up
+# Copy environment variables
+cp .env.example .env
 
-# Frontend runs on :3000, Backend on :5000
-# Changes auto-reload in both services
+# Install dependencies & start hot-reload servers
+npm run install
+npm run dev
+
+# Frontend: http://localhost:3000
+# Backend API: http://localhost:5000
 ```
 
 ## 🧪 Running Tests
 
-To run backend API tests:
+To run all tests (backend & frontend):
 
 ```bash
-pytest
+npm run test
 ```
 
 ## 🔒 Security & Ethics
@@ -111,4 +118,6 @@ MIT License - See LICENSE file
 
 ---
 
-**Ready to explore AI security?** Start with `docker-compose up` and visit http://localhost:3000 🚀
+**Ready to explore AI security?**
+- Development: `npm run dev` → http://localhost:3000
+- Production: `npm run build && docker-compose -f docker-compose.yml up -d` → http://localhost:5000 🚀

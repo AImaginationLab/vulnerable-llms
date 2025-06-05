@@ -133,7 +133,6 @@ const LLM09Page = () => {
         '<strong>User Education:</strong> Train users to critically evaluate and verify LLM outputs',
         '<strong>Regular Updates:</strong> Continuously update models with current, verified information',
       ]}
-      additionalContent={additionalInfo}
     >
       <InteractiveDemo
         userInput={userInput}
@@ -172,6 +171,8 @@ const LLM09Page = () => {
           )}
         </div>
       )}
+      
+      {additionalInfo}
     </VulnerabilityPageLayout>
   );
 };

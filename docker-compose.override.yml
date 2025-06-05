@@ -1,3 +1,4 @@
+version: "3.8"
 services:
   ollama:
     image: ollama/ollama
@@ -12,14 +13,15 @@ services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
+      target: development
     ports:
       - "5000:5000"
       - "3000:3000"
     depends_on:
       - ollama
     environment:
-      OLLAMA_HOST: http://ollama:11434
+      OLLAMA_HOST: ${OLLAMA_HOST:-http://ollama:11434}
       ENVIRONMENT: development
       NODE_ENV: development
     volumes:

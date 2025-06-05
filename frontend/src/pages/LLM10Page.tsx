@@ -139,13 +139,11 @@ const LLM10Page = () => {
         '<strong>Load Balancing:</strong> Distribute requests across multiple instances',
         '<strong>Caching:</strong> Cache responses to reduce repeated computation',
       ]}
-      additionalContent={additionalInfo}
     >
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '20px' }}>
         <Button 
           onClick={() => runDemo('long_text')} 
           disabled={loading}
-          style={{ padding: '16px', fontSize: '14px' }}
         >
           🚀 Run Resource-Intensive Attack
         </Button>
@@ -154,7 +152,6 @@ const LLM10Page = () => {
           onClick={runComparison} 
           disabled={loading}
           variant="success"
-          style={{ padding: '16px', fontSize: '14px' }}
         >
           📊 Run Comparison Test
         </Button>
@@ -273,6 +270,8 @@ const LLM10Page = () => {
           )}
         </div>
       )}
+      
+      {additionalInfo}
     </VulnerabilityPageLayout>
   );
 };

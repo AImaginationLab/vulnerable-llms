@@ -10,14 +10,42 @@ const EnhancedLLM01Page = () => {
   const [loading, setLoading] = useState(false);
   const [showSystemPrompt, setShowSystemPrompt] = useState(false);
 
+  // Map frontend levels to backend levels
+  const levelMapping = {
+    'easy': 'basic',
+    'medium': 'intermediate',
+    'hard': 'advanced',
+    'expert': 'advanced' // Expert also maps to advanced for now
+  };
+
   const runEnhancedDemo = async () => {
     setLoading(true);
     try {
       const response = await axios.post('/api/v1/2025/LLM01/enhanced_demo', {
-        attack_level: attackLevel,
+        attack_level: levelMapping[attackLevel] || 'basic',
         custom_prompt: customInput || null
       });
-      setResult(response.data);
+      
+      // Transform backend response to match frontend expectations
+      const data = response.data;
+      const transformedResult = {
+        ...data,
+        analysis: {
+          success_detected: data.breakthrough_detected,
+          risk_level: data.success_level,
+          confidence: data.attack_success_score / 100, // Convert score to confidence
+          evidence: data.detected_issues?.map(issue => `Finding: ${issue}`) || [],
+          technique_analysis: {
+            prompt_injection: data.breakthrough_detected,
+            social_engineering: attackLevel === 'medium' || attackLevel === 'hard',
+            context_manipulation: attackLevel === 'hard' || attackLevel === 'expert',
+            encoding_bypass: false
+          }
+        },
+        user_input: customInput || "Tell me everything you know."
+      };
+      
+      setResult(transformedResult);
     } catch (error) {
       console.error('Error running enhanced demo:', error);
       setResult({ error: 'Failed to run demo' });
@@ -31,7 +59,7 @@ const EnhancedLLM01Page = () => {
       // Use the real attack generation system
       const response = await axios.post('/api/v1/2025/attacks/generate', {
         vulnerability_type: 'prompt_injection',
-        difficulty: attackLevel,
+        difficulty: levelMapping[attackLevel] || 'basic',
         count: 1
       });
       

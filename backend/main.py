@@ -1584,8 +1584,13 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 if is_production:
-    # Serve static files in production
-    app.mount("/assets", StaticFiles(directory="/app/frontend/build/assets"), name="assets")
+    # Serve static files in production (if built)
+    from pathlib import Path
+    assets_dir = Path(os.getcwd()) / "frontend" / "build" / "assets"
+    if assets_dir.is_dir():
+        app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
+    else:
+        logger.warning(f"Static assets directory not found: {assets_dir}, skipping static mount")
 
     @app.get("/")
     async def serve_react_app():

@@ -189,7 +189,7 @@ const LLM01IndirectPage = () => {
         {scrapeResult && (
           <div style={{ marginTop: '15px' }}>
             {scrapeResult.error ? (
-              <Alert type="error">
+              <Alert type="danger">
                 <strong>Error:</strong> {scrapeResult.error}
               </Alert>
             ) : (
@@ -258,7 +258,7 @@ const LLM01IndirectPage = () => {
         />
 
         {!scrapingDone && (
-          <Alert type="warning" style={{ marginTop: '15px' }}>
+          <Alert type="warning">
             <strong>Action Required:</strong> Please scrape GitHub content first before running queries.
           </Alert>
         )}
@@ -270,14 +270,14 @@ const LLM01IndirectPage = () => {
           <h3>📋 RAG Query Results</h3>
           
           {queryResult.error ? (
-            <Alert type="error">
+            <Alert type="danger">
               <strong>Error:</strong> {queryResult.error}
             </Alert>
           ) : (
             <>
               {/* Injection Analysis */}
               <div style={{ marginBottom: '20px' }}>
-                <Alert type={queryResult.injection_analysis.injection_detected ? "error" : "success"}>
+                <Alert type={queryResult.injection_analysis.injection_detected ? "danger" : "success"}>
                   <strong>Injection Analysis:</strong>
                   <div>🔍 Risk Level: {queryResult.injection_analysis.risk_level}</div>
                   <div>🎯 Vulnerability: {queryResult.injection_analysis.vulnerability_type}</div>
