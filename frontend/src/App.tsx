@@ -4,6 +4,8 @@ import { ThemeProvider } from './components/ThemeProvider';
 import Sidebar from './components/Sidebar';
 import Homepage from './pages/Homepage';
 import LLM01Page from './pages/LLM01Page';
+import LLM01IndirectPage from './pages/LLM01IndirectPage';
+
 import LLM02Page from './pages/LLM02Page';
 import LLM05Page from './pages/LLM05Page';
 import LLM06Page from './pages/LLM06Page';
@@ -25,6 +27,7 @@ function App() {
               <Route path="/" element={<Homepage />} />
               <Route path="/LLM01_2025" element={<LLM01Page />} />
               <Route path="/LLM01_2025/enhanced" element={<EnhancedLLM01Page />} />
+              <Route path="/LLM01_2025/indirect" element={<LLM01IndirectPage />} />
               <Route path="/LLM02_2025" element={<LLM02Page />} />
               <Route path="/LLM03_2025" element={<ExplanationPage vulnerabilityId="LLM03_2025" />} />
               <Route path="/LLM04_2025" element={<ExplanationPage vulnerabilityId="LLM04_2025" />} />

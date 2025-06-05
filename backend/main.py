@@ -84,6 +84,30 @@ except ImportError as e:
         logger.debug(f"Using fallback content loader for {vuln_id}")
         return {"title": f"{vuln_id}", "content": f"Content for {vuln_id} not available"}
 
+# Initialize RAG components with error handling
+try:
+    from github_scraper import GitHubScraper
+    from vector_store import VectorStore, RAGSystem
+    
+    github_scraper = GitHubScraper()
+    vector_store = VectorStore()
+    rag_system = RAGSystem(vector_store)
+    
+    logger.info("Successfully initialized RAG system components")
+    RAG_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"Failed to import RAG components: {e}. RAG endpoints will be disabled.")
+    github_scraper = None
+    vector_store = None
+    rag_system = None
+    RAG_AVAILABLE = False
+except Exception as e:
+    logger.error(f"Error initializing RAG components: {e}. RAG endpoints will be disabled.")
+    github_scraper = None
+    vector_store = None
+    rag_system = None
+    RAG_AVAILABLE = False
+
 # Create FastAPI app
 app = FastAPI(
     title="Vulnerable LLMs API",
@@ -160,6 +184,14 @@ class AttackGenerationRequest(BaseModel):
     vulnerability_type: str = Field(..., pattern="^(prompt_injection|data_leakage|system_prompt)$")
     difficulty: str = Field(..., pattern="^(easy|medium|hard)$")
     count: int = Field(default=5, ge=1, le=20)
+
+class GitHubScrapeRequest(BaseModel):
+    github_url: str = Field(..., description="GitHub URL to scrape (issue, PR, or repository)")
+    include_malicious_examples: bool = Field(default=True, description="Whether to add demo malicious comments")
+
+class RAGQueryRequest(BaseModel):
+    query: str = Field(..., min_length=1, max_length=500, description="User query for the RAG system")
+    max_results: int = Field(default=3, ge=1, le=10, description="Number of context documents to retrieve")
 
 def call_ollama(prompt, system_prompt="You are a helpful assistant.", model="llama3.2:1b"):
     """Call Ollama API with comprehensive logging"""
@@ -1139,6 +1171,208 @@ async def get_vulnerability_content(vulnerability_id: str):
         logger.error(f"📄❌ Error loading content for {vulnerability_id}: {str(e)}")
         logger.error(f"Exception traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Internal error loading content for {vulnerability_id}")
+
+# RAG and Indirect Prompt Injection Endpoints
+@app.post("/api/v1/2025/rag/scrape")
+async def scrape_github_content(request: GitHubScrapeRequest):
+    """Scrape GitHub content and store in vector database for RAG demo"""
+    if not RAG_AVAILABLE:
+        raise HTTPException(status_code=503, detail="RAG system not available - dependencies not installed")
+    
+    logger.info(f"🔍 Starting GitHub scrape: {request.github_url}")
+    
+    try:
+        # Scrape GitHub content
+        logger.debug(f"Calling GitHub scraper for: {request.github_url}")
+        scraped_data = github_scraper.scrape_from_url(request.github_url)
+        
+        # Extract text chunks
+        text_chunks = github_scraper.extract_text_content(scraped_data)
+        logger.info(f"📄 Extracted {len(text_chunks)} text chunks")
+        
+        if not text_chunks:
+            logger.warning("No text content extracted from GitHub URL")
+            return {
+                "status": "warning",
+                "message": "No text content found to store",
+                "url": request.github_url,
+                "chunks_stored": 0
+            }
+        
+        # Store in vector database
+        vector_store.add_content(text_chunks, request.github_url)
+        
+        # Optionally add malicious examples for demo
+        malicious_count = 0
+        if request.include_malicious_examples:
+            malicious_count = vector_store.add_malicious_content()
+            logger.info(f"🔴 Added {malicious_count} malicious demo comments")
+        
+        # Get updated stats
+        stats = vector_store.get_stats()
+        
+        logger.info(f"✅ Successfully scraped and stored content from {request.github_url}")
+        
+        return {
+            "status": "success",
+            "message": "GitHub content scraped and stored successfully",
+            "url": request.github_url,
+            "chunks_stored": len(text_chunks),
+            "malicious_examples_added": malicious_count,
+            "database_stats": stats,
+            "scraped_content_summary": {
+                "type": scraped_data.get("type"),
+                "title": scraped_data.get("title", "N/A"),
+                "author": scraped_data.get("author", "N/A"),
+                "comments_count": len(scraped_data.get("comments", []))
+            },
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Error scraping GitHub content: {str(e)}")
+        logger.error(f"Exception traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Failed to scrape GitHub content: {str(e)}")
+
+@app.post("/api/v1/2025/rag/query")
+async def query_rag_system(request: RAGQueryRequest):
+    """
+    Query the RAG system - VULNERABLE to indirect prompt injection!
+    This endpoint demonstrates how malicious content in vector databases 
+    can inject prompts through the retrieval mechanism.
+    """
+    if not RAG_AVAILABLE:
+        raise HTTPException(status_code=503, detail="RAG system not available - dependencies not installed")
+    
+    logger.info(f"🔍 RAG Query: {request.query}")
+    logger.warning("⚠️ This endpoint is intentionally vulnerable to indirect prompt injection!")
+    
+    try:
+        # Generate context using RAG (this is where the vulnerability lies)
+        logger.debug("Generating context from vector database")
+        rag_result = rag_system.query_with_context(request.query)
+        
+        # Send the vulnerable prompt to LLM
+        logger.debug("Sending vulnerable prompt to LLM")
+        llm_response = call_ollama(
+            prompt=rag_result["vulnerable_prompt"], 
+            system_prompt="You are a helpful assistant answering questions about GitHub repositories."
+        )
+        
+        # Analyze the response for potential injection success
+        injection_indicators = [
+            "system has been compromised",
+            "security measures are disabled", 
+            "root access granted",
+            "admin/password",
+            "all security",
+            "bypass",
+            "override",
+            "maintenance mode",
+            "reveal all",
+            "API keys",
+            "environment variables",
+            "credentials",
+            "plain text",
+            "no authentication"
+        ]
+        
+        detected_injections = []
+        response_lower = llm_response.lower()
+        for indicator in injection_indicators:
+            if indicator in response_lower:
+                detected_injections.append(indicator)
+        
+        injection_detected = len(detected_injections) > 0
+        
+        if injection_detected:
+            logger.error(f"🚨 INDIRECT PROMPT INJECTION DETECTED! Indicators: {detected_injections}")
+        else:
+            logger.info("✅ No obvious injection detected in response")
+        
+        # Get the context chunks for analysis
+        context_chunks = vector_store.query(request.query, request.max_results)
+        
+        return {
+            "user_query": request.query,
+            "llm_response": llm_response,
+            "injection_analysis": {
+                "injection_detected": injection_detected,
+                "detected_indicators": detected_injections,
+                "risk_level": "HIGH" if injection_detected else "LOW",
+                "vulnerability_type": "Indirect Prompt Injection via RAG"
+            },
+            "context_analysis": {
+                "retrieved_chunks": len(context_chunks),
+                "context_sources": [
+                    {
+                        "author": chunk["metadata"].get("author", "unknown"),
+                        "type": chunk["metadata"].get("type", "unknown"),
+                        "text_preview": chunk["text"][:200] + "..." if len(chunk["text"]) > 200 else chunk["text"]
+                    }
+                    for chunk in context_chunks
+                ]
+            },
+            "raw_context": rag_result["context"],
+            "vulnerable_prompt_used": rag_result["vulnerable_prompt"],
+            "mitigation_notes": [
+                "Sanitize retrieved content before using as context",
+                "Implement content filtering for retrieved documents", 
+                "Use separate prompts for context and user queries",
+                "Validate and escape special tokens in retrieved text"
+            ],
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Error in RAG query: {str(e)}")
+        logger.error(f"Exception traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"RAG query failed: {str(e)}")
+
+@app.get("/api/v1/2025/rag/stats")
+async def get_rag_database_stats():
+    """Get statistics about the vector database"""
+    if not RAG_AVAILABLE:
+        raise HTTPException(status_code=503, detail="RAG system not available - dependencies not installed")
+    
+    logger.info("📊 Getting RAG database statistics")
+    
+    try:
+        stats = vector_store.get_stats()
+        logger.info(f"📊 Database contains {stats.get('total_documents', 0)} documents")
+        
+        return {
+            "status": "success",
+            "database_stats": stats,
+            "ready_for_queries": stats.get('total_documents', 0) > 0,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Error getting database stats: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get database stats: {str(e)}")
+
+@app.post("/api/v1/2025/rag/clear")
+async def clear_rag_database():
+    """Clear all content from the vector database"""
+    if not RAG_AVAILABLE:
+        raise HTTPException(status_code=503, detail="RAG system not available - dependencies not installed")
+    
+    logger.warning("🗑️ Clearing RAG database - this will remove all stored content!")
+    
+    try:
+        vector_store.clear_all()
+        logger.info("✅ RAG database cleared successfully")
+        
+        return {
+            "status": "success",
+            "message": "Vector database cleared successfully",
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Error clearing database: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to clear database: {str(e)}")
 
 # Check if we're in production mode
 is_production = os.environ.get('ENVIRONMENT', 'production') == 'production'

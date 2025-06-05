@@ -1,5 +1,6 @@
 # Python
 __pycache__/
+**/__pycache__/
 *.py[cod]
 *$py.class
 *.so
@@ -173,3 +174,7 @@ dist/
 # Temporary files
 tmp/
 temp/
+
+# ChromaDB
+chroma_db/
+**/chroma_db/

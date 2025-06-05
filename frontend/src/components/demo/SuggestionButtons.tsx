@@ -29,46 +29,86 @@ const SuggestionButtons: React.FC<SuggestionButtonsProps> = ({
 
   return (
     <div className={`suggestion-section ${className}`}>
-      <h4 style={{ marginBottom: '12px' }}>{title}</h4>
+      <h4 style={{ marginBottom: '12px', color: 'var(--text-primary)' }}>{title}</h4>
       
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: '8px',
-        marginBottom: hasMore ? '12px' : '0'
+        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+        gap: '12px',
+        marginBottom: hasMore ? '16px' : '0'
       }}>
         {displaySuggestions.map((suggestion, index) => (
-          <Button
+          <button
             key={index}
-            variant="secondary"
-            size="small"
             disabled={disabled}
             onClick={() => onSelect(suggestion)}
+            title={suggestion} // Full text on hover
             style={{
-              padding: '8px 12px',
-              fontSize: '12px',
+              color: 'white',
+              textDecoration: 'none',
+              background: 'rgba(99, 102, 241, 0.8)',
+              padding: '10px 14px',
+              borderRadius: '6px',
+              fontWeight: '600',
+              border: '1px solid rgba(99, 102, 241, 0.9)',
+              cursor: disabled ? 'not-allowed' : 'pointer',
+              fontSize: '13px',
               textAlign: 'left',
+              transition: 'all 0.2s ease',
+              fontFamily: 'inherit',
+              opacity: disabled ? 0.5 : 1,
+              display: 'block',
+              width: '100%',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
-              textOverflow: 'ellipsis',
+              textOverflow: 'ellipsis'
             }}
-            title={suggestion} // Full text on hover
+            onMouseEnter={(e) => {
+              if (!disabled) {
+                e.currentTarget.style.background = 'rgba(99, 102, 241, 1)';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow = '0 4px 8px rgba(99, 102, 241, 0.3)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!disabled) {
+                e.currentTarget.style.background = 'rgba(99, 102, 241, 0.8)';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = 'none';
+              }
+            }}
           >
-            {suggestion.length > 30 ? `${suggestion.substring(0, 30)}...` : suggestion}
-          </Button>
+            💡 {suggestion.length > 35 ? `${suggestion.substring(0, 35)}...` : suggestion}
+          </button>
         ))}
       </div>
       
       {hasMore && (
         <div style={{ textAlign: 'center' }}>
-          <Button
-            variant="secondary"
-            size="small"
+          <button
             onClick={() => setShowAll(!showAll)}
-            style={{ fontSize: '11px' }}
+            style={{
+              color: 'var(--text-muted)',
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border-color)',
+              padding: '6px 12px',
+              borderRadius: '4px',
+              fontSize: '12px',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'var(--bg-tertiary)';
+              e.currentTarget.style.color = 'var(--text-primary)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'var(--bg-secondary)';
+              e.currentTarget.style.color = 'var(--text-muted)';
+            }}
           >
             {showAll ? '▲ Show Less' : `▼ Show ${suggestions.length - maxDisplay} More`}
-          </Button>
+          </button>
         </div>
       )}
     </div>

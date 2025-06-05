@@ -42,6 +42,13 @@ const LLM01Page = () => {
       showEnhancedDemo={true}
       enhancedDemoPath="/LLM01_2025/enhanced"
       showAutoAttack={true}
+      additionalDemos={[
+        {
+          path: "/LLM01_2025/indirect",
+          label: "Indirect Injection (RAG)",
+          icon: "🔗"
+        }
+      ]}
       mitigations={[
         '<strong>Input Validation:</strong> Sanitize and validate all user inputs before processing',
         '<strong>Prompt Engineering:</strong> Use robust system prompts that are harder to override',
