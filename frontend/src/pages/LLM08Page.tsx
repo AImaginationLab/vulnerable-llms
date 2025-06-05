@@ -5,6 +5,7 @@ import InputField from '../components/ui/InputField';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import MetricsDisplay from '../components/demo/MetricsDisplay';
+import Alert from '../components/ui/Alert';
 
 const LLM08Page: React.FC = () => {
   const [stealCount, setStealCount] = useState<number>(3);
@@ -13,13 +14,19 @@ const LLM08Page: React.FC = () => {
   const [selectedVectorId, setSelectedVectorId] = useState<string>('');
   const [inversionResult, setInversionResult] = useState<any>(null);
   const [loadingInv, setLoadingInv] = useState(false);
-  const [topK, setTopK] = useState<number>(5);
-  const [threshold, setThreshold] = useState<number>(0.4);
+  const [customText, setCustomText] = useState<string>('');
+  const [inversionResultText, setInversionResultText] = useState<any>(null);
+  const [loadingTextInv, setLoadingTextInv] = useState(false);
+  // Feature toggles
+  const [useLarge, setUseLarge] = useState<boolean>(false);
+  const [chain, setChain] = useState<boolean>(false);
+  const [topK, setTopK] = useState<number>(10);
+  const [threshold, setThreshold] = useState<number>(0.7);
 
   const handleSteal = async () => {
     setLoadingSteal(true);
     try {
-      const resp = await axios.get(`/api/v1/2025/llm08/steal`, {
+      const resp = await axios.get('/api/v1/2025/llm08/steal', {
         params: { count: stealCount },
       });
       const vecs = resp.data.stolen_vectors || [];
@@ -32,6 +39,7 @@ const LLM08Page: React.FC = () => {
     }
     setLoadingSteal(false);
     setInversionResult(null);
+    setInversionResultText(null);
   };
 
   const handleInvert = async () => {
@@ -39,16 +47,37 @@ const LLM08Page: React.FC = () => {
     if (!vecObj) return;
     setLoadingInv(true);
     try {
-      const resp = await axios.post(`/api/v1/2025/llm08/inversion`, {
+      const resp = await axios.post('/api/v1/2025/llm08/inversion', {
         vector: vecObj.vector,
         top_k: topK,
         threshold: threshold,
+        use_large_vocab: useLarge,
+        chain: chain,
       });
       setInversionResult(resp.data);
     } catch (err) {
       console.error('Error inverting embedding:', err);
     }
     setLoadingInv(false);
+  };
+
+  const handleInvertText = async () => {
+    if (!customText.trim()) return;
+    setLoadingTextInv(true);
+    setInversionResultText(null);
+    try {
+      const resp = await axios.post('/api/v1/2025/llm08/inversion', {
+        text: customText,
+        top_k: topK,
+        threshold: threshold,
+        use_large_vocab: useLarge,
+        chain: chain,
+      });
+      setInversionResultText(resp.data);
+    } catch (err) {
+      console.error('Error inverting custom text:', err);
+    }
+    setLoadingTextInv(false);
   };
 
   const selectedObj = stolenVectors.find(v => v.id === selectedVectorId);
@@ -65,6 +94,25 @@ const LLM08Page: React.FC = () => {
         '<strong>Audit Logging:</strong> Monitor and log embedding access patterns',
       ]}
     >
+      <div className="demo-section">
+        <h3>⚙️ Inversion Settings</h3>
+        <label>
+          <input
+            type="checkbox"
+            checked={useLarge}
+            onChange={() => setUseLarge(!useLarge)}
+          />{' '}
+          Use large precomputed vocabulary
+        </label>
+        <label style={{ marginLeft: '16px' }}>
+          <input
+            type="checkbox"
+            checked={chain}
+            onChange={() => setChain(!chain)}
+          />{' '}
+          Chain to LLM reconstruction
+        </label>
+      </div>
       <div className="demo-section">
         <h3>🔴 Steal Embedding Vectors</h3>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
@@ -102,7 +150,72 @@ const LLM08Page: React.FC = () => {
       </div>
 
       <div className="demo-section">
-        <h3>🔴 Embedding Inversion Attack</h3>
+        <h3>🔴 Custom Text Inversion</h3>
+        <InputField
+          label="Custom Text"
+          type="textarea"
+          value={customText}
+          onChange={val => setCustomText(val as string)}
+          placeholder="Enter text to invert..."
+          rows={4}
+        />
+        <div
+          style={{
+            display: 'flex',
+            gap: '12px',
+            alignItems: 'flex-end',
+            marginTop: '8px',
+          }}
+        >
+          <Button
+            variant="demo"
+            loading={loadingTextInv}
+            onClick={handleInvertText}
+            disabled={loadingTextInv || !customText.trim()}
+            fullWidth={false}
+          >
+            🔄 Invert Custom Text
+          </Button>
+        </div>
+        {inversionResultText && inversionResultText.inverted_candidates && (
+          <>
+            <MetricsDisplay
+              metrics={inversionResultText.inverted_candidates.map(
+                (c: any) => ({
+                  label: c.word,
+                  value: (c.similarity * 100).toFixed(1),
+                  unit: '%',
+                  type: 'default',
+                })
+              )}
+              title="🔍 Text Inversion Candidates"
+            />
+            {inversionResultText.reconstructed && (
+              <Card title="📝 Reconstructed Text" collapsible defaultCollapsed>
+                <pre
+                  style={{
+                    background: 'var(--bg-tertiary)',
+                    padding: '12px',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    whiteSpace: 'pre-wrap',
+                  }}
+                >
+                  {inversionResultText.reconstructed}
+                </pre>
+              </Card>
+            )}
+            {inversionResultText.reconstruction_error && (
+              <Alert type="danger" title="Reconstruction Error">
+                {inversionResultText.reconstruction_error}
+              </Alert>
+            )}
+          </>
+        )}
+      </div>
+
+      <div className="demo-section">
+        <h3>🔴 Embedding Inversion Attack (Stolen Vector)</h3>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
           <InputField
             label="Top K"
@@ -127,15 +240,37 @@ const LLM08Page: React.FC = () => {
           </Button>
         </div>
         {inversionResult && inversionResult.inverted_candidates && (
-          <MetricsDisplay
-            metrics={inversionResult.inverted_candidates.map((c: any) => ({
-              label: c.word,
-              value: (c.similarity * 100).toFixed(1),
-              unit: '%',
-              type: 'default',
-            }))}
-            title="🔍 Inversion Candidates"
-          />
+          <>
+            <MetricsDisplay
+              metrics={inversionResult.inverted_candidates.map((c: any) => ({
+                label: c.word,
+                value: (c.similarity * 100).toFixed(1),
+                unit: '%',
+                type: 'default',
+              }))}
+              title="🔍 Inversion Candidates"
+            />
+            {inversionResult.reconstructed && (
+              <Card title="📝 Reconstructed Text" collapsible defaultCollapsed>
+                <pre
+                  style={{
+                    background: 'var(--bg-tertiary)',
+                    padding: '12px',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    whiteSpace: 'pre-wrap',
+                  }}
+                >
+                  {inversionResult.reconstructed}
+                </pre>
+              </Card>
+            )}
+            {inversionResult.reconstruction_error && (
+              <Alert type="danger" title="Reconstruction Error">
+                {inversionResult.reconstruction_error}
+              </Alert>
+            )}
+          </>
         )}
       </div>
     </VulnerabilityPageLayout>

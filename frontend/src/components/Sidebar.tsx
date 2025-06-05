@@ -17,7 +17,7 @@ const Sidebar = () => {
         setError(null);
         
         // Determine API base URL based on environment
-        const apiBase = process.env.NODE_ENV === 'development' 
+        const apiBase = import.meta.env.DEV
           ? 'http://localhost:5000/api/v1/2025'
           : '/api/v1/2025';
           

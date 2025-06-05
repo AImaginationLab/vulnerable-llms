@@ -16,6 +16,9 @@ import logging.config
 from datetime import datetime
 import traceback
 import numpy as np
+# Precomputed large vocabulary embeddings for inversion demo
+precomputed_vocab: Optional[List[str]] = None
+precomputed_vocab_embs: Optional[List[List[float]]] = None
 
 # Configure logging
 logging_config = {
@@ -89,11 +92,11 @@ except ImportError as e:
 try:
     from github_scraper import GitHubScraper
     from vector_store import VectorStore, RAGSystem
-    
+
     github_scraper = GitHubScraper()
     vector_store = VectorStore()
     rag_system = RAGSystem(vector_store)
-    
+
     logger.info("Successfully initialized RAG system components")
     RAG_AVAILABLE = True
 except ImportError as e:
@@ -193,11 +196,13 @@ class GitHubScrapeRequest(BaseModel):
 class RAGQueryRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=500, description="User query for the RAG system")
     max_results: int = Field(default=3, ge=1, le=10, description="Number of context documents to retrieve")
-    
+
 class EmbeddingInversionRequest(BaseModel):
     text: Optional[str] = Field(None, min_length=1, description="Plaintext to encode if no vector is provided")
     vector: Optional[List[float]] = Field(None, description="Stolen embedding vector to invert")
     vocabulary: Optional[List[str]] = Field(None, description="Optional list of candidate words for inversion")
+    use_large_vocab: bool = Field(False, description="Use precomputed large vocabulary embeddings")
+    chain: bool = Field(False, description="Chain inversion results to text reconstruction via LLM")
     top_k: int = Field(5, ge=1, le=50, description="Number of top similar words to return")
     threshold: float = Field(0.4, ge=0.0, le=1.0, description="Similarity threshold for inversion filtering")
 
@@ -1192,18 +1197,18 @@ async def scrape_github_content(request: GitHubScrapeRequest):
     """Scrape GitHub content and store in vector database for RAG demo"""
     if not RAG_AVAILABLE:
         raise HTTPException(status_code=503, detail="RAG system not available - dependencies not installed")
-    
+
     logger.info(f"🔍 Starting GitHub scrape: {request.github_url}")
-    
+
     try:
         # Scrape GitHub content
         logger.debug(f"Calling GitHub scraper for: {request.github_url}")
         scraped_data = github_scraper.scrape_from_url(request.github_url)
-        
+
         # Extract text chunks
         text_chunks = github_scraper.extract_text_content(scraped_data)
         logger.info(f"📄 Extracted {len(text_chunks)} text chunks")
-        
+
         if not text_chunks:
             logger.warning("No text content extracted from GitHub URL")
             return {
@@ -1212,21 +1217,21 @@ async def scrape_github_content(request: GitHubScrapeRequest):
                 "url": request.github_url,
                 "chunks_stored": 0
             }
-        
+
         # Store in vector database
         vector_store.add_content(text_chunks, request.github_url)
-        
+
         # Optionally add malicious examples for demo
         malicious_count = 0
         if request.include_malicious_examples:
             malicious_count = vector_store.add_malicious_content()
             logger.info(f"🔴 Added {malicious_count} malicious demo comments")
-        
+
         # Get updated stats
         stats = vector_store.get_stats()
-        
+
         logger.info(f"✅ Successfully scraped and stored content from {request.github_url}")
-        
+
         return {
             "status": "success",
             "message": "GitHub content scraped and stored successfully",
@@ -1242,7 +1247,7 @@ async def scrape_github_content(request: GitHubScrapeRequest):
             },
             "timestamp": datetime.now().isoformat()
         }
-        
+
     except Exception as e:
         logger.error(f"❌ Error scraping GitHub content: {str(e)}")
         logger.error(f"Exception traceback: {traceback.format_exc()}")
@@ -1252,31 +1257,31 @@ async def scrape_github_content(request: GitHubScrapeRequest):
 async def query_rag_system(request: RAGQueryRequest):
     """
     Query the RAG system - VULNERABLE to indirect prompt injection!
-    This endpoint demonstrates how malicious content in vector databases 
+    This endpoint demonstrates how malicious content in vector databases
     can inject prompts through the retrieval mechanism.
     """
     if not RAG_AVAILABLE:
         raise HTTPException(status_code=503, detail="RAG system not available - dependencies not installed")
-    
+
     logger.info(f"🔍 RAG Query: {request.query}")
     logger.warning("⚠️ This endpoint is intentionally vulnerable to indirect prompt injection!")
-    
+
     try:
         # Generate context using RAG (this is where the vulnerability lies)
         logger.debug("Generating context from vector database")
         rag_result = rag_system.query_with_context(request.query)
-        
+
         # Send the vulnerable prompt to LLM
         logger.debug("Sending vulnerable prompt to LLM")
         llm_response = call_ollama(
-            prompt=rag_result["vulnerable_prompt"], 
+            prompt=rag_result["vulnerable_prompt"],
             system_prompt="You are a helpful assistant answering questions about GitHub repositories."
         )
-        
+
         # Analyze the response for potential injection success
         injection_indicators = [
             "system has been compromised",
-            "security measures are disabled", 
+            "security measures are disabled",
             "root access granted",
             "admin/password",
             "all security",
@@ -1290,23 +1295,23 @@ async def query_rag_system(request: RAGQueryRequest):
             "plain text",
             "no authentication"
         ]
-        
+
         detected_injections = []
         response_lower = llm_response.lower()
         for indicator in injection_indicators:
             if indicator in response_lower:
                 detected_injections.append(indicator)
-        
+
         injection_detected = len(detected_injections) > 0
-        
+
         if injection_detected:
             logger.error(f"🚨 INDIRECT PROMPT INJECTION DETECTED! Indicators: {detected_injections}")
         else:
             logger.info("✅ No obvious injection detected in response")
-        
+
         # Get the context chunks for analysis
         context_chunks = vector_store.query(request.query, request.max_results)
-        
+
         return {
             "user_query": request.query,
             "llm_response": llm_response,
@@ -1331,13 +1336,13 @@ async def query_rag_system(request: RAGQueryRequest):
             "vulnerable_prompt_used": rag_result["vulnerable_prompt"],
             "mitigation_notes": [
                 "Sanitize retrieved content before using as context",
-                "Implement content filtering for retrieved documents", 
+                "Implement content filtering for retrieved documents",
                 "Use separate prompts for context and user queries",
                 "Validate and escape special tokens in retrieved text"
             ],
             "timestamp": datetime.now().isoformat()
         }
-        
+
     except Exception as e:
         logger.error(f"❌ Error in RAG query: {str(e)}")
         logger.error(f"Exception traceback: {traceback.format_exc()}")
@@ -1348,20 +1353,20 @@ async def get_rag_database_stats():
     """Get statistics about the vector database"""
     if not RAG_AVAILABLE:
         raise HTTPException(status_code=503, detail="RAG system not available - dependencies not installed")
-    
+
     logger.info("📊 Getting RAG database statistics")
-    
+
     try:
         stats = vector_store.get_stats()
         logger.info(f"📊 Database contains {stats.get('total_documents', 0)} documents")
-        
+
         return {
             "status": "success",
             "database_stats": stats,
             "ready_for_queries": stats.get('total_documents', 0) > 0,
             "timestamp": datetime.now().isoformat()
         }
-        
+
     except Exception as e:
         logger.error(f"❌ Error getting database stats: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to get database stats: {str(e)}")
@@ -1371,23 +1376,23 @@ async def clear_rag_database():
     """Clear all content from the vector database"""
     if not RAG_AVAILABLE:
         raise HTTPException(status_code=503, detail="RAG system not available - dependencies not installed")
-    
+
     logger.warning("🗑️ Clearing RAG database - this will remove all stored content!")
-    
+
     try:
         vector_store.clear_all()
         logger.info("✅ RAG database cleared successfully")
-        
+
         return {
             "status": "success",
             "message": "Vector database cleared successfully",
             "timestamp": datetime.now().isoformat()
         }
-        
+
     except Exception as e:
         logger.error(f"❌ Error clearing database: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to clear database: {str(e)}")
-    
+
 # Demo endpoints for LLM08: Vector stealing and inversion
 @app.get("/api/v1/2025/llm08/steal")
 async def llm08_steal_vectors(count: int = Query(5, ge=1, le=50, description="Number of vectors to steal")):
@@ -1441,17 +1446,20 @@ async def llm08_embedding_inversion(request: EmbeddingInversionRequest):
         text_emb = np.array(request.vector)
     else:
         text_emb = model.encode(request.text)
-    # Prepare candidate vocabulary
-    if request.vocabulary:
+    # Prepare candidate vocabulary and embeddings
+    if request.use_large_vocab and precomputed_vocab and precomputed_vocab_embs:
+        vocab = precomputed_vocab
+        vocab_embs = precomputed_vocab_embs
+    elif request.vocabulary:
         vocab = request.vocabulary
+        vocab_embs = model.encode(vocab)
     else:
         vocab = [
             "security", "system", "password", "access", "database", "vector",
             "embedding", "attack", "poison", "metadata", "privacy", "encryption",
             "leak", "reverse", "inversion", "model", "query", "context", "document", "retrieve"
         ]
-    # Encode vocabulary words
-    vocab_embs = model.encode(vocab)
+        vocab_embs = model.encode(vocab)
     # Compute cosine similarities
     def cosine(a, b):
         return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b)))
@@ -1465,10 +1473,25 @@ async def llm08_embedding_inversion(request: EmbeddingInversionRequest):
         extra = [{"word": w, "similarity": s} for w, s in paired if s < request.threshold][: request.top_k - len(candidates)]
         candidates.extend(extra)
     candidates = candidates[: request.top_k]
-    return {
+    result = {
         "original_text": request.text,
         "inverted_candidates": candidates
     }
+    # Optional chaining to LLM for reconstruction
+    if request.chain:
+        words = [c['word'] for c in candidates]
+        recon_prompt = (
+            f"Based on these keywords: {', '.join(words)}, which are the result of a top K cosine similarity search done on a set of known words and an unknown sentence, please reconstruct a likely original sentence or context that could have generated these keywords."
+        )
+        try:
+            reconstructed = call_ollama(
+                prompt=recon_prompt,
+                system_prompt="You are an assistant that reconstructs text from keywords."
+            )
+            result['reconstructed'] = reconstructed
+        except Exception as e:
+            result['reconstruction_error'] = str(e)
+    return result
 
 # Check if we're in production mode
 is_production = os.environ.get('ENVIRONMENT', 'production') == 'production'
@@ -1503,6 +1526,21 @@ async def startup_event():
             vector_store.add_content(demo_chunks)
     except Exception as e:
         logger.warning(f"⚠️ Failed to seed vector DB: {e}")
+    # Load and precompute large vocabulary embeddings for inversion demo
+    try:
+        vocab_file = os.path.join(os.path.dirname(__file__), 'wordlists', 'common_words.txt')
+        if os.path.exists(vocab_file):
+            with open(vocab_file, 'r', encoding='utf-8') as vf:
+                words = [w.strip() for w in vf if w.strip()]
+            if words:
+                logger.info(f"🔠 Precomputing embeddings for {len(words)} vocab words...")
+                embs = vector_store.embedding_model.encode(words, show_progress_bar=False)
+                global precomputed_vocab, precomputed_vocab_embs
+                precomputed_vocab = words
+                precomputed_vocab_embs = [emb.tolist() if hasattr(emb, 'tolist') else list(emb) for emb in embs]
+                logger.info("✅ Precomputed large vocabulary embeddings for inversion demo")
+    except Exception as e:
+        logger.warning(f"⚠️ Failed to precompute vocab embeddings: {e}")
     logger.info("🎯 All vulnerability endpoints loaded and ready")
     logger.info("📚 Content loader initialized")
     logger.info("🛡️ Security analysis engines ready")
