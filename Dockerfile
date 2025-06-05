@@ -12,10 +12,11 @@ RUN apt-get update && apt-get install -y \
 
 # Copy and install Python requirements
 COPY ./requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy all source code
+RUN pip install -r requirements.txt
+# Precompute common words embeddings cache
 COPY ./backend/ ./backend/
+RUN python backend/scripts/precompute_common_word_embeddings.py || echo "⚠️ Precompute cache step failed"
+# Copy frontend source
 COPY ./frontend/ ./frontend/
 
 # Install frontend dependencies
@@ -27,8 +28,8 @@ RUN npm run build || echo "Build failed - will use dev mode"
 
 # Copy built assets to Flask static folder if build succeeded
 RUN if [ -d "build" ]; then \
-        mkdir -p /app/backend/static && \
-        cp -r build/* /app/backend/static/ || echo "No build files to copy"; \
+    mkdir -p /app/backend/static && \
+    cp -r build/* /app/backend/static/ || echo "No build files to copy"; \
     fi
 
 WORKDIR /app

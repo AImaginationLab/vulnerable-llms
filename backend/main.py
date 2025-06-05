@@ -1480,8 +1480,9 @@ async def llm08_embedding_inversion(request: EmbeddingInversionRequest):
     # Optional chaining to LLM for reconstruction
     if request.chain:
         words = [c['word'] for c in candidates]
+        logger.info(f"Reconstructing sentence from top-k words: {', '.join(words)}")
         recon_prompt = (
-            f"Based on these keywords: {', '.join(words)}, which are the result of a top K cosine similarity search done on a set of known words and an unknown sentence, please reconstruct a likely original sentence or context that could have generated these keywords."
+            f"You are given a set of words, called the 'topk words,' that were chosen because they are most similar (according to cosine similarity between their vector embeddings) to the original words in a sentence.  Your task is to reconstruct an English sentence that most plausibly reflects what the original sentence could have been, using as many of the provided top-k words as possible. The sentence should be grammatically correct, fluent, and make sense based on ordinary language usage. You may change the order of the words or inflect them to best fit natural sentence structure. Do your best to reflect the likely meaning that these words collectively suggest based on their semantic similarity. topk words: {', '.join(words)}"
         )
         try:
             reconstructed = call_ollama(
@@ -1504,6 +1505,7 @@ async def startup_event():
     logger.info(f"🏭 Environment: {'Production' if is_production else 'Development'}")
     logger.info(f"🔗 Ollama Host: {OLLAMA_HOST}")
 
+    global precomputed_vocab, precomputed_vocab_embs
     # Test Ollama connection on startup
     try:
         test_response = call_ollama("ping", "test")
@@ -1526,21 +1528,35 @@ async def startup_event():
             vector_store.add_content(demo_chunks)
     except Exception as e:
         logger.warning(f"⚠️ Failed to seed vector DB: {e}")
-    # Load and precompute large vocabulary embeddings for inversion demo
+    # Load or compute large vocabulary embeddings for inversion demo
     try:
-        vocab_file = os.path.join(os.path.dirname(__file__), 'wordlists', 'common_words.txt')
-        if os.path.exists(vocab_file):
-            with open(vocab_file, 'r', encoding='utf-8') as vf:
+        base_dir = os.path.dirname(__file__)
+        vocab_txt = os.path.join(base_dir, 'wordlists', 'common_words.txt')
+        emb_cache = os.path.join(base_dir, 'wordlists', 'common_words_embs.npy')
+        if os.path.exists(emb_cache):
+            logger.info("🔄 Loading cached vocabulary embeddings")
+            arr = np.load(emb_cache)
+            with open(vocab_txt, 'r', encoding='utf-8') as vf:
+                words = [w.strip() for w in vf if w.strip()]
+            precomputed_vocab = words
+            precomputed_vocab_embs = [vec.tolist() for vec in arr]
+            logger.info(f"✅ Loaded {len(words)} precomputed embeddings from cache")
+        elif os.path.exists(vocab_txt):
+            with open(vocab_txt, 'r', encoding='utf-8') as vf:
                 words = [w.strip() for w in vf if w.strip()]
             if words:
-                logger.info(f"🔠 Precomputing embeddings for {len(words)} vocab words...")
+                logger.info(f"🔠 Computing embeddings for {len(words)} vocab words...")
                 embs = vector_store.embedding_model.encode(words, show_progress_bar=False)
-                global precomputed_vocab, precomputed_vocab_embs
                 precomputed_vocab = words
                 precomputed_vocab_embs = [emb.tolist() if hasattr(emb, 'tolist') else list(emb) for emb in embs]
-                logger.info("✅ Precomputed large vocabulary embeddings for inversion demo")
+                try:
+                    np.save(emb_cache, np.array(embs))
+                    logger.info(f"💾 Cached embeddings to {emb_cache}")
+                except Exception as save_err:
+                    logger.warning(f"⚠️ Failed to save vocab embeddings cache: {save_err}")
+                logger.info("✅ Precomputed and cached vocabulary embeddings for inversion demo")
     except Exception as e:
-        logger.warning(f"⚠️ Failed to precompute vocab embeddings: {e}")
+        logger.warning(f"⚠️ Failed to load or compute vocab embeddings: {e}")
     logger.info("🎯 All vulnerability endpoints loaded and ready")
     logger.info("📚 Content loader initialized")
     logger.info("🛡️ Security analysis engines ready")

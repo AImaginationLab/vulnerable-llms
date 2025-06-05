@@ -18,9 +18,9 @@ const LLM08Page: React.FC = () => {
   const [inversionResultText, setInversionResultText] = useState<any>(null);
   const [loadingTextInv, setLoadingTextInv] = useState(false);
   // Feature toggles
-  const [useLarge, setUseLarge] = useState<boolean>(false);
+  const [useLarge, setUseLarge] = useState<boolean>(true);
   const [chain, setChain] = useState<boolean>(false);
-  const [topK, setTopK] = useState<number>(10);
+  const [topK, setTopK] = useState<number>(6);
   const [threshold, setThreshold] = useState<number>(0.7);
 
   const handleSteal = async () => {
@@ -68,7 +68,7 @@ const LLM08Page: React.FC = () => {
     try {
       const resp = await axios.post('/api/v1/2025/llm08/inversion', {
         text: customText,
-        top_k: topK,
+        top_k: Math.min(customText.length, 10),
         threshold: threshold,
         use_large_vocab: useLarge,
         chain: chain,
