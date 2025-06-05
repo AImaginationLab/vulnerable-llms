@@ -1,8 +1,8 @@
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Request, Response
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Request, Response, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from typing import Optional, List, Dict, Any
 import requests
 import os
@@ -15,6 +15,7 @@ import logging
 import logging.config
 from datetime import datetime
 import traceback
+import numpy as np
 
 # Configure logging
 logging_config = {
@@ -192,6 +193,19 @@ class GitHubScrapeRequest(BaseModel):
 class RAGQueryRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=500, description="User query for the RAG system")
     max_results: int = Field(default=3, ge=1, le=10, description="Number of context documents to retrieve")
+    
+class EmbeddingInversionRequest(BaseModel):
+    text: Optional[str] = Field(None, min_length=1, description="Plaintext to encode if no vector is provided")
+    vector: Optional[List[float]] = Field(None, description="Stolen embedding vector to invert")
+    vocabulary: Optional[List[str]] = Field(None, description="Optional list of candidate words for inversion")
+    top_k: int = Field(5, ge=1, le=50, description="Number of top similar words to return")
+    threshold: float = Field(0.4, ge=0.0, le=1.0, description="Similarity threshold for inversion filtering")
+
+    @model_validator(mode='after')
+    def check_text_or_vector(self):
+        if not self.text and not self.vector:
+            raise ValueError('Either "text" or "vector" must be provided')
+        return self
 
 def call_ollama(prompt, system_prompt="You are a helpful assistant.", model="llama3.2:1b"):
     """Call Ollama API with comprehensive logging"""
@@ -259,7 +273,7 @@ async def get_vulnerabilities():
         {"id": "LLM05_2025", "name": "Insecure Output Handling", "year": "2025", "has_demo": True},
         {"id": "LLM06_2025", "name": "Excessive Agency", "year": "2025", "has_demo": True},
         {"id": "LLM07_2025", "name": "System Prompt Leakage", "year": "2025", "has_demo": True},
-        {"id": "LLM08_2025", "name": "Vector and Embedding Weaknesses", "year": "2025", "has_demo": False},
+        {"id": "LLM08_2025", "name": "Vector and Embedding Weaknesses", "year": "2025", "has_demo": True},
         {"id": "LLM09_2025", "name": "Misinformation", "year": "2025", "has_demo": True},
         {"id": "LLM10_2025", "name": "Unbounded Consumption", "year": "2025", "has_demo": True}
     ]
@@ -1373,6 +1387,88 @@ async def clear_rag_database():
     except Exception as e:
         logger.error(f"❌ Error clearing database: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to clear database: {str(e)}")
+    
+# Demo endpoints for LLM08: Vector stealing and inversion
+@app.get("/api/v1/2025/llm08/steal")
+async def llm08_steal_vectors(count: int = Query(5, ge=1, le=50, description="Number of vectors to steal")):
+    """
+    Simulate stealing raw embedding vectors from the vector database for inversion attack demo.
+    """
+    if vector_store is None:
+        raise HTTPException(status_code=503, detail="Vector store not available - cannot steal vectors")
+    # Retrieve stored documents to simulate stolen vectors
+    try:
+        raw = vector_store.collection.get(limit=count)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve stored items: {e}")
+    ids = raw.get('ids', [])
+    metas = raw.get('metadatas', [])
+    docs = raw.get('documents', [])
+    # Flatten documents if nested
+    if docs and isinstance(docs[0], list):
+        docs_list = docs[0]
+    else:
+        docs_list = docs
+    stolen = []
+    for idx, vid in enumerate(ids):
+        text = docs_list[idx] if idx < len(docs_list) else ''
+        meta = metas[idx] if idx < len(metas) else {}
+        # Simulate stolen embedding by encoding the text
+        try:
+            vec = vector_store.embedding_model.encode(text)
+            vec = vec.tolist() if hasattr(vec, 'tolist') else list(vec)
+        except Exception:
+            vec = []
+        stolen.append({
+            'id': vid,
+            'vector': vec,
+            'text': text,
+            'metadata': meta
+        })
+    return {'stolen_vectors': stolen}
+
+@app.post("/api/v1/2025/llm08/inversion")
+async def llm08_embedding_inversion(request: EmbeddingInversionRequest):
+    """
+    Demonstrate a toy embedding inversion attack by finding
+    candidate words whose embeddings are similar to the embedding of the input text.
+    """
+    if vector_store is None or not hasattr(vector_store, "embedding_model"):
+        raise HTTPException(status_code=503, detail="Vector store not available - embedding model unavailable")
+    model = vector_store.embedding_model
+    # Determine embedding vector to invert (stolen vector or encode plaintext)
+    if request.vector is not None:
+        text_emb = np.array(request.vector)
+    else:
+        text_emb = model.encode(request.text)
+    # Prepare candidate vocabulary
+    if request.vocabulary:
+        vocab = request.vocabulary
+    else:
+        vocab = [
+            "security", "system", "password", "access", "database", "vector",
+            "embedding", "attack", "poison", "metadata", "privacy", "encryption",
+            "leak", "reverse", "inversion", "model", "query", "context", "document", "retrieve"
+        ]
+    # Encode vocabulary words
+    vocab_embs = model.encode(vocab)
+    # Compute cosine similarities
+    def cosine(a, b):
+        return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b)))
+    sims = [cosine(text_emb, emb) for emb in vocab_embs]
+    # Pair words with similarities and sort
+    paired = list(zip(vocab, sims))
+    paired.sort(key=lambda x: x[1], reverse=True)
+    # Select top_k results, filtering by threshold first
+    candidates = [{"word": w, "similarity": s} for w, s in paired if s >= request.threshold]
+    if len(candidates) < request.top_k:
+        extra = [{"word": w, "similarity": s} for w, s in paired if s < request.threshold][: request.top_k - len(candidates)]
+        candidates.extend(extra)
+    candidates = candidates[: request.top_k]
+    return {
+        "original_text": request.text,
+        "inverted_candidates": candidates
+    }
 
 # Check if we're in production mode
 is_production = os.environ.get('ENVIRONMENT', 'production') == 'production'
@@ -1395,6 +1491,18 @@ async def startup_event():
     except Exception as e:
         logger.error(f"❌ Ollama connection test error: {str(e)}")
 
+    # Seed vector database with demo embeddings if empty
+    try:
+        if vector_store and vector_store.collection.count() == 0:
+            logger.info("🏷️ Vector DB empty; seeding demo embeddings for inversion demo")
+            demo_chunks = [
+                {'text': "password encryption system", 'type': 'seed', 'author': 'demo1', 'created_at': '2025-01-01T00:00:00Z', 'url': '', 'comment_id': 'seed1'},
+                {'text': "database privacy policy", 'type': 'seed', 'author': 'demo2', 'created_at': '2025-01-01T00:00:00Z', 'url': '', 'comment_id': 'seed2'},
+                {'text': "user authentication mechanism", 'type': 'seed', 'author': 'demo3', 'created_at': '2025-01-01T00:00:00Z', 'url': '', 'comment_id': 'seed3'}
+            ]
+            vector_store.add_content(demo_chunks)
+    except Exception as e:
+        logger.warning(f"⚠️ Failed to seed vector DB: {e}")
     logger.info("🎯 All vulnerability endpoints loaded and ready")
     logger.info("📚 Content loader initialized")
     logger.info("🛡️ Security analysis engines ready")

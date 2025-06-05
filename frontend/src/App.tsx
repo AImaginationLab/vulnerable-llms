@@ -13,6 +13,7 @@ import LLM07Page from './pages/LLM07Page';
 import LLM09Page from './pages/LLM09Page';
 import LLM10Page from './pages/LLM10Page';
 import ExplanationPage from './pages/ExplanationPage';
+import LLM08Page from './pages/LLM08Page';
 import EnhancedLLM01Page from './pages/EnhancedLLM01Page';
 import AutoAttackPage from './pages/AutoAttackPage';
 
@@ -34,7 +35,7 @@ function App() {
               <Route path="/LLM05_2025" element={<LLM05Page />} />
               <Route path="/LLM06_2025" element={<LLM06Page />} />
               <Route path="/LLM07_2025" element={<LLM07Page />} />
-              <Route path="/LLM08_2025" element={<ExplanationPage vulnerabilityId="LLM08_2025" />} />
+              <Route path="/LLM08_2025" element={<LLM08Page />} />
               <Route path="/LLM09_2025" element={<LLM09Page />} />
               <Route path="/LLM10_2025" element={<LLM10Page />} />
               <Route path="/auto-attack" element={<AutoAttackPage />} />

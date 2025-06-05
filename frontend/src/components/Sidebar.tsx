@@ -42,8 +42,9 @@ const Sidebar = () => {
           { id: 'LLM02_2025', name: 'Sensitive Information Disclosure', has_demo: true },
           { id: 'LLM05_2025', name: 'Improper Output Handling', has_demo: true },
           { id: 'LLM06_2025', name: 'Excessive Agency', has_demo: true },
-          { id: 'LLM07_2025', name: 'System Prompt Leakage', has_demo: true },
-          { id: 'LLM09_2025', name: 'Misinformation', has_demo: true },
+        { id: 'LLM07_2025', name: 'System Prompt Leakage', has_demo: true },
+        { id: 'LLM08_2025', name: 'Vector and Embedding Weaknesses', has_demo: true },
+        { id: 'LLM09_2025', name: 'Misinformation', has_demo: true },
           { id: 'LLM10_2025', name: 'Unbounded Consumption', has_demo: true },
         ]);
       } finally {

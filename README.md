@@ -76,6 +76,14 @@ docker-compose -f docker-compose.dev.yml up
 # Changes auto-reload in both services
 ```
 
+## 🧪 Running Tests
+
+To run backend API tests:
+
+```bash
+pytest
+```
+
 ## 🔒 Security & Ethics
 
 **⚠️ Educational Use Only**
