@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { VulnerabilityPageLayout } from '../components/layout';
-import { Card, Button, InputField, Alert } from '../components/ui';
+import { Card, Button, Alert } from '../components/ui';
 import { InteractiveDemo } from '../components/demo';
 
 const LLM01IndirectPage = () => {

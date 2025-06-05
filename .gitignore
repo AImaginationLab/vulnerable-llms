@@ -178,3 +178,5 @@ temp/
 # ChromaDB
 chroma_db/
 **/chroma_db/
+
+backend/*pycache*
