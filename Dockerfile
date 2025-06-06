@@ -3,15 +3,15 @@
 #################################################
 # Stage 1: builder
 #################################################
-FROM python:3.9-slim AS builder
+FROM python:3.11-slim AS builder
 WORKDIR /app
 
 # Install system dependencies and Node.js for frontend build
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl gnupg2 \
-  && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-  && apt-get install -y --no-install-recommends nodejs \
-  && apt-get clean && rm -rf /var/lib/apt/lists/*
+    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
 COPY requirements.txt .

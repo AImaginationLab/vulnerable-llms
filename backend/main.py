@@ -88,30 +88,6 @@ except ImportError as e:
         logger.debug(f"Using fallback content loader for {vuln_id}")
         return {"title": f"{vuln_id}", "content": f"Content for {vuln_id} not available"}
 
-# Initialize RAG components with error handling
-try:
-    from github_scraper import GitHubScraper
-    from vector_store import VectorStore, RAGSystem
-
-    github_scraper = GitHubScraper()
-    vector_store = VectorStore()
-    rag_system = RAGSystem(vector_store)
-
-    logger.info("Successfully initialized RAG system components")
-    RAG_AVAILABLE = True
-except ImportError as e:
-    logger.warning(f"Failed to import RAG components: {e}. RAG endpoints will be disabled.")
-    github_scraper = None
-    vector_store = None
-    rag_system = None
-    RAG_AVAILABLE = False
-except Exception as e:
-    logger.error(f"Error initializing RAG components: {e}. RAG endpoints will be disabled.")
-    github_scraper = None
-    vector_store = None
-    rag_system = None
-    RAG_AVAILABLE = False
-
 # Create FastAPI app
 app = FastAPI(
     title="Vulnerable LLMs API",
@@ -265,10 +241,30 @@ def call_ollama(prompt, system_prompt="You are a helpful assistant.", model="lla
         logger.error(f"Exception traceback: {traceback.format_exc()}")
         return error_msg
 
+def get_rag_components():
+    """Helper to get RAG components with proper error handling"""
+    if not getattr(app.state, 'rag_available', False):
+        if getattr(app.state, 'rag_loading', False):
+            raise HTTPException(status_code=503, detail="RAG system is still loading, please try again in a moment")
+        else:
+            raise HTTPException(status_code=503, detail="RAG system is not available")
+    
+    return app.state.vector_store, app.state.rag_system
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint for Docker startup verification"""
     return {"status": "healthy", "service": "vulnerable-llms-backend"}
+
+@app.get("/health/ready")
+async def readiness_check():
+    """Extended health check that includes component status"""
+    return {
+        "status": "healthy",
+        "service": "vulnerable-llms-backend",
+        "rag_available": getattr(app.state, 'rag_available', False),
+        "rag_loading": getattr(app.state, 'rag_loading', False)
+    }
 
 @app.get("/api/v1/2025/vulnerabilities")
 async def get_vulnerabilities():
@@ -1223,6 +1219,9 @@ async def scrape_github_content(request: GitHubScrapeRequest):
                 "chunks_stored": 0
             }
 
+        # Get RAG components
+        vector_store, rag_system = get_rag_components()
+        
         # Store in vector database
         vector_store.add_content(text_chunks, request.github_url)
 
@@ -1272,6 +1271,9 @@ async def query_rag_system(request: RAGQueryRequest):
     logger.warning("⚠️ This endpoint is intentionally vulnerable to indirect prompt injection!")
 
     try:
+        # Get RAG components
+        vector_store, rag_system = get_rag_components()
+        
         # Generate context using RAG (this is where the vulnerability lies)
         logger.debug("Generating context from vector database")
         rag_result = rag_system.query_with_context(request.query)
@@ -1314,6 +1316,9 @@ async def query_rag_system(request: RAGQueryRequest):
         else:
             logger.info("✅ No obvious injection detected in response")
 
+        # Get RAG components  
+        vector_store, rag_system = get_rag_components()
+        
         # Get the context chunks for analysis
         context_chunks = vector_store.query(request.query, request.max_results)
 
@@ -1362,6 +1367,9 @@ async def get_rag_database_stats():
     logger.info("📊 Getting RAG database statistics")
 
     try:
+        # Get RAG components  
+        vector_store, rag_system = get_rag_components()
+        
         stats = vector_store.get_stats()
         logger.info(f"📊 Database contains {stats.get('total_documents', 0)} documents")
 
@@ -1504,42 +1512,60 @@ is_production = os.environ.get('ENVIRONMENT', 'production') == 'production'
 logger.info(f"🏭 Production mode: {is_production}")
 
 # Startup and shutdown events
-@app.on_event("startup")
-async def startup_event():
-    logger.info("🚀 FastAPI Application Starting Up")
-    logger.info(f"🏭 Environment: {'Production' if is_production else 'Development'}")
-    logger.info(f"🔗 Ollama Host: {OLLAMA_HOST}")
-
-    global precomputed_vocab, precomputed_vocab_embs
-    # Test Ollama connection on startup
+async def load_heavy_components():
+    """Load heavy components asynchronously in the background"""
+    logger.info("🔄 Starting background initialization of heavy components...")
+    app.state.rag_loading = True
+    
     try:
-        test_response = call_ollama("ping", "test")
-        if "Error" not in test_response:
-            logger.info("✅ Ollama connection test successful")
-        else:
-            logger.warning(f"⚠️ Ollama connection test failed: {test_response}")
-    except Exception as e:
-        logger.error(f"❌ Ollama connection test error: {str(e)}")
+        # Initialize RAG components
+        from github_scraper import GitHubScraper
+        from vector_store import VectorStore, RAGSystem
 
-    # Seed vector database with demo embeddings if empty
-    try:
-        if vector_store and vector_store.collection.count() == 0:
+        logger.info("📦 Loading GitHub scraper...")
+        app.state.github_scraper = GitHubScraper()
+        
+        logger.info("🗄️ Loading vector store (this may take a moment)...")
+        app.state.vector_store = VectorStore()
+        
+        logger.info("🤖 Initializing RAG system...")
+        app.state.rag_system = RAGSystem(app.state.vector_store)
+        app.state.rag_available = True
+
+        logger.info("✅ RAG system components initialized successfully")
+        
+        # Seed vector database with demo embeddings if empty
+        if app.state.vector_store.collection.count() == 0:
             logger.info("🏷️ Vector DB empty; seeding demo embeddings for inversion demo")
             demo_chunks = [
                 {'text': "password encryption system", 'type': 'seed', 'author': 'demo1', 'created_at': '2025-01-01T00:00:00Z', 'url': '', 'comment_id': 'seed1'},
                 {'text': "database privacy policy", 'type': 'seed', 'author': 'demo2', 'created_at': '2025-01-01T00:00:00Z', 'url': '', 'comment_id': 'seed2'},
                 {'text': "user authentication mechanism", 'type': 'seed', 'author': 'demo3', 'created_at': '2025-01-01T00:00:00Z', 'url': '', 'comment_id': 'seed3'}
             ]
-            vector_store.add_content(demo_chunks)
+            app.state.vector_store.add_content(demo_chunks)
+            logger.info("🌱 Demo embeddings seeded successfully")
+        
+    except ImportError as e:
+        logger.warning(f"Failed to import RAG components: {e}. RAG endpoints will be disabled.")
+        app.state.rag_available = False
     except Exception as e:
-        logger.warning(f"⚠️ Failed to seed vector DB: {e}")
-    # Load or compute large vocabulary embeddings for inversion demo
+        logger.error(f"Error initializing RAG components: {e}. RAG endpoints will be disabled.")
+        logger.error(f"Exception traceback: {traceback.format_exc()}")
+        app.state.rag_available = False
+    finally:
+        app.state.rag_loading = False
+
+async def load_vocabulary_embeddings():
+    """Load precomputed vocabulary embeddings for embedding inversion demo"""
+    global precomputed_vocab, precomputed_vocab_embs
+    
     try:
         base_dir = os.path.dirname(__file__)
         vocab_txt = os.path.join(base_dir, 'wordlists', 'common_words.txt')
         emb_cache = os.path.join(base_dir, 'wordlists', 'common_words_embs.npy')
+        
         if os.path.exists(emb_cache):
-            logger.info("🔄 Loading cached vocabulary embeddings")
+            logger.info("🔄 Loading cached vocabulary embeddings...")
             arr = np.load(emb_cache)
             with open(vocab_txt, 'r', encoding='utf-8') as vf:
                 words = [w.strip() for w in vf if w.strip()]
@@ -1549,19 +1575,39 @@ async def startup_event():
         elif os.path.exists(vocab_txt):
             with open(vocab_txt, 'r', encoding='utf-8') as vf:
                 words = [w.strip() for w in vf if w.strip()]
-            if words:
+            if words and hasattr(app.state, 'vector_store') and app.state.vector_store:
                 logger.info(f"🔠 Computing embeddings for {len(words)} vocab words...")
-                embs = vector_store.embedding_model.encode(words, show_progress_bar=False)
+                embs = app.state.vector_store.embedding_model.encode(words, show_progress_bar=False)
                 precomputed_vocab = words
                 precomputed_vocab_embs = [emb.tolist() if hasattr(emb, 'tolist') else list(emb) for emb in embs]
                 try:
                     np.save(emb_cache, np.array(embs))
                     logger.info(f"💾 Cached embeddings to {emb_cache}")
                 except Exception as save_err:
-                    logger.warning(f"⚠️ Failed to save vocab embeddings cache: {save_err}")
-                logger.info("✅ Precomputed and cached vocabulary embeddings for inversion demo")
+                    logger.warning(f"Failed to save embedding cache: {save_err}")
     except Exception as e:
-        logger.warning(f"⚠️ Failed to load or compute vocab embeddings: {e}")
+        logger.warning(f"⚠️ Failed to load vocabulary embeddings: {e}")
+
+@app.on_event("startup")
+async def startup_event():
+    logger.info("🚀 FastAPI Application Starting Up")
+    logger.info(f"🏭 Environment: {'Production' if is_production else 'Development'}")
+    logger.info(f"🔗 Ollama Host: {OLLAMA_HOST}")
+
+    # Initialize app state
+    app.state.rag_available = False
+    app.state.rag_loading = False
+
+    # Start heavy component loading in background (don't await!)
+    asyncio.create_task(load_heavy_components())
+    
+    # Also load vocabulary embeddings after RAG system is ready
+    async def load_vocab_after_rag():
+        # Wait a bit for RAG system to load first
+        await asyncio.sleep(1)
+        await load_vocabulary_embeddings()
+    
+    asyncio.create_task(load_vocab_after_rag())
     logger.info("🎯 All vulnerability endpoints loaded and ready")
     logger.info("📚 Content loader initialized")
     logger.info("🛡️ Security analysis engines ready")

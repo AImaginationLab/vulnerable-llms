@@ -22,11 +22,23 @@ An interactive security testing platform that demonstrates real vulnerabilities 
 ## 🏃 Quick Start
 
 ### Development Mode
+
+#### Option 1: Docker (Recommended - Everything included)
 ```bash
 # Clone the repo
 git clone <repository-url>
 cd vulnerable-llms
 
+# Start the full stack (frontend + backend + Ollama)
+docker-compose -f docker-compose.override.yml up
+
+# Access the app at http://localhost:3000
+# Backend API available at http://localhost:5000
+# Ollama LLM service at http://localhost:11434
+```
+
+#### Option 2: Local Development
+```bash
 # Install dependencies
 npm ci                    # Install root dependencies (TypeScript, tsx)
 npm run install:frontend  # Install frontend dependencies
@@ -35,20 +47,21 @@ npm run install:backend   # Install Python backend dependencies
 # Start React development server (with hot reload)
 npm run dev
 
+# In separate terminal, start Python backend:
+cd backend && python main.py
+
 # Access the app at http://localhost:3000
-# Backend runs separately: npm run dev:docker (Python at :5000)
 ```
 
 ### Production Mode
 ```bash
-# Build TypeScript frontend
-npm run build
-
-# Start production server  
-npm run start:http
-
-# Or run full stack with Docker
+# Option 1: Docker (Recommended)
 docker-compose up --build
+
+# Option 2: Manual build and serve
+npm run build              # Build React app
+npm run build:server       # Compile Express server
+npm run start:http         # Start production server
 ```
 
 ## 🎮 What You Can Do
@@ -92,8 +105,8 @@ source venv/bin/activate
 pip install -r requirements.txt
 cd backend && python main.py
 
-# 5. Full Docker stack
-npm run dev:docker     # Both frontend + backend
+# 5. Full Docker stack (includes Ollama LLM service)
+docker-compose -f docker-compose.override.yml up
 ```
 
 ## 🧪 Running Tests
@@ -140,9 +153,15 @@ export CPLUS_INCLUDE_PATH="$SDKROOT/usr/include/c++/v1:$SDKROOT/usr/include"
 pip install -r requirements.txt
 ```
 
-**First startup takes forever:**
-- Ollama downloads the LLM model (~1.5GB) on first run
-- Subsequent startups are much faster
+**Docker startup behavior:**
+- Backend health check passes in ~7 seconds (FastAPI starts quickly)
+- RAG components (ML models) load asynchronously in background (~10 more seconds)
+- Frontend starts immediately after backend health check passes
+- First Ollama startup downloads LLM model (~1.5GB), subsequent runs are faster
+
+**If Docker startup fails:**
+- Ensure you have at least 8GB RAM available
+- On slower machines, ML model loading may take longer but won't block startup
 
 ## 🤝 Contributing
 
@@ -161,5 +180,6 @@ MIT License - See LICENSE file
 ---
 
 **Ready to explore AI security?**
-- **Development**: `npm run dev:watch` → http://localhost:3000
-- **Production**: `npm run build && npm run start:http` → http://localhost:3000 🚀
+- **Docker Development**: `docker-compose -f docker-compose.override.yml up` → http://localhost:3000
+- **Local Development**: `npm run dev` → http://localhost:3000  
+- **Production**: `docker-compose up --build` → http://localhost:3000 🚀
