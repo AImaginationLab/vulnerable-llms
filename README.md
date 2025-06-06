@@ -6,31 +6,63 @@ An interactive security testing platform that demonstrates real vulnerabilities 
 
 ## ✨ Key Features
 
-- **🤖 Automated Attack Testing**: AI-powered attack generation with promptfoo integration
-- **🎯 7 Interactive Demos**: Live vulnerability demonstrations with real LLM responses
-- **📈 Progressive Difficulty**: Attack levels from beginner to expert
-- **🔍 Real-time Analysis**: See exactly how and why attacks succeed
-- **🌙 Modern UI**: TypeScript React app with light/dark/hacker themes
-- **🚀 Fast Setup**: Docker-based, runs completely offline
+- **Interactive Demos**: Live vulnerability demonstrations with real LLM responses
+- **Automated Attack Testing**: AI-powered attack generation
+- **RAG Attack Scenarios**: Indirect prompt injection via web scraping & vector poisoning
+- **Attack Analysis**: Learn how and attacks are orchestrated and why they succeed
+- **Local Setup**: Docker-based, runs completely offline
 
 ## Prerequisites
 
-- Docker and Docker Compose
+- Docker + Docker Compose
+- Node.js 22+ and npm
+- Python 3.11+ (for local development)
 - At least 8GB of available RAM (for running Ollama with LLM models)
 
 ## 🏃 Quick Start
 
+### Development Mode
+
+#### Option 1: Docker (Recommended - Everything included)
 ```bash
-# Clone and run
+# Clone the repo
 git clone <repository-url>
 cd vulnerable-llms
-docker-compose up -d
 
-# Access the app
-open http://localhost:3000
+# Start the full stack (frontend + backend + Ollama)
+docker-compose -f docker-compose.override.yml up
+
+# Access the app at http://localhost:3000
+# Backend API available at http://localhost:5000
+# Ollama LLM service at http://localhost:11434
 ```
 
-That's it! The app will download Ollama and the LLM model automatically (first run takes ~10 minutes).
+#### Option 2: Local Development
+```bash
+# Install dependencies
+npm ci                    # Install root dependencies (TypeScript, tsx)
+npm run install:frontend  # Install frontend dependencies
+npm run install:backend   # Install Python backend dependencies
+
+# Start React development server (with hot reload)
+npm run dev
+
+# In separate terminal, start Python backend:
+cd backend && python main.py
+
+# Access the app at http://localhost:3000
+```
+
+### Production Mode
+```bash
+# Option 1: Docker (Recommended)
+docker-compose up --build
+
+# Option 2: Manual build and serve
+npm run build              # Build React app
+npm run build:server       # Compile Express server
+npm run start:http         # Start production server
+```
 
 ## 🎮 What You Can Do
 
@@ -39,49 +71,63 @@ That's it! The app will download Ollama and the LLM model automatically (first r
 Experience firsthand how LLM vulnerabilities work:
 
 - **Prompt Injection**: Break through system instructions to extract secrets
+- **Indirect Prompt Injection**: Weaponize external data sources (GitHub repos) in RAG systems
+- **Vector & Embedding Weaknesses**: Steal and invert embeddings to recover original text
 - **Information Disclosure**: Extract sensitive data from LLM context
 - **System Prompt Leakage**: Reveal hidden instructions and IP
 - **Excessive Agency**: Trick LLMs into dangerous actions
 - **Output Handling**: Inject malicious content through LLM responses
-- **Misinformation**: Generate and detect false information
 - **Resource Exhaustion**: Launch DoS attacks against LLM services
-
-### Auto-Attack Mode 🚀
-
-The standout feature - watch AI automatically find vulnerabilities:
-
-1. Navigate to `/auto-attack`
-2. Select a vulnerability to test
-3. Watch as the system generates increasingly sophisticated attacks
-4. Get detailed reports on successful breaches
-
-### Enhanced Attack Mode
-
-For deeper testing on specific vulnerabilities:
-
-- Multiple difficulty levels (Easy → Expert)
-- AI-generated attack suggestions
-- Real-time success scoring
-- Defense recommendations
 
 ## 🛠️ Development
 
-### Run in Development Mode
+### Local Development Setup
 
 ```bash
-# Use the dev compose file for hot reloading
-docker-compose -f docker-compose.dev.yml up
+# 1. Install all dependencies
+npm ci                    # Root dependencies (TypeScript, tsx)
+npm run install:frontend  # Frontend dependencies
+npm run install:backend   # Python backend dependencies
 
-# Frontend runs on :3000, Backend on :5000
-# Changes auto-reload in both services
+# 2. Frontend Development (React with Vite)
+npm run dev            # Start React dev server with hot reload
+npm run dev:http       # Start React dev server on all interfaces
+npm run build          # Build React app for production
+
+# 3. Frontend Production Server (Express with tsx)
+npm run build:server   # Compile Express server TypeScript
+npm run server:dev     # Run Express server for serving built React app
+npm run start:http     # Run compiled Express server
+
+# 4. Backend (Python - separate terminal)
+python3.11 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+cd backend && python main.py
+
+# 5. Full Docker stack (includes Ollama LLM service)
+docker-compose -f docker-compose.override.yml up
 ```
 
 ## 🧪 Running Tests
 
-To run backend API tests:
-
 ```bash
-pytest
+# Run all tests (backend + frontend linting + type checking + unit tests)
+npm run test:all
+
+# Run individual test suites
+npm run test:backend      # Python/FastAPI tests
+npm run test:frontend     # Frontend unit tests (vitest)
+npm run lint             # ESLint checks
+npm run typecheck        # TypeScript validation
+```
+
+### Test Requirements
+
+For backend tests, you need Python dependencies installed:
+```bash
+source venv/bin/activate  # Activate virtual environment
+pip install -r requirements.txt
 ```
 
 ## 🔒 Security & Ethics
@@ -95,6 +141,28 @@ This tool demonstrates real vulnerabilities. Use it only:
 
 The application runs completely offline with no external dependencies, ensuring a safe testing environment.
 
+## 🚨 Troubleshooting
+
+### Common Issues
+
+**ChromaDB compilation errors on macOS:**
+```bash
+# Set proper SDK path and try again
+export SDKROOT=$(xcrun --show-sdk-path)
+export CPLUS_INCLUDE_PATH="$SDKROOT/usr/include/c++/v1:$SDKROOT/usr/include"
+pip install -r requirements.txt
+```
+
+**Docker startup behavior:**
+- Backend health check passes in ~7 seconds (FastAPI starts quickly)
+- RAG components (ML models) load asynchronously in background (~10 more seconds)
+- Frontend starts immediately after backend health check passes
+- First Ollama startup downloads LLM model (~1.5GB), subsequent runs are faster
+
+**If Docker startup fails:**
+- Ensure you have at least 8GB RAM available
+- On slower machines, ML model loading may take longer but won't block startup
+
 ## 🤝 Contributing
 
 We welcome contributions! Areas of interest:
@@ -105,10 +173,13 @@ We welcome contributions! Areas of interest:
 - Support for more LLM models
 - Enhanced reporting features
 
-## 📄 License
+## License
 
 MIT License - See LICENSE file
 
 ---
 
-**Ready to explore AI security?** Start with `docker-compose up` and visit http://localhost:3000 🚀
+**Ready to explore AI security?**
+- **Docker Development**: `docker-compose -f docker-compose.override.yml up` → http://localhost:3000
+- **Local Development**: `npm run dev` → http://localhost:3000  
+- **Production**: `docker-compose up --build` → http://localhost:3000 🚀

@@ -1,44 +1,72 @@
-FROM python:3.9-slim
+# syntax=docker/dockerfile:1.4
 
+#################################################
+# Stage 1: builder
+#################################################
+FROM python:3.11-slim AS builder
 WORKDIR /app
 
-# Install Node.js for frontend build only
-RUN apt-get update && apt-get install -y \
-    curl \
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+# Install system dependencies and Node.js for frontend build
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl gnupg2 \
+    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Copy and install Python requirements
-COPY ./requirements.txt .
-RUN pip install -r requirements.txt
-# Precompute common words embeddings cache
-COPY ./backend/ ./backend/
-RUN python backend/scripts/precompute_common_word_embeddings.py || echo "⚠️ Precompute cache step failed"
-# Copy frontend source
-COPY ./frontend/ ./frontend/
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Install frontend dependencies
+# Copy backend and scripts
+COPY backend/ backend/
+COPY scripts/ scripts/
+RUN python backend/scripts/precompute_common_word_embeddings.py
+
+# Install frontend dependencies and build assets
+COPY frontend/package*.json frontend/
 WORKDIR /app/frontend
-RUN npm install
+RUN npm ci
+COPY frontend/ .
+RUN npm run build
 
-# Build frontend for production (will be skipped in dev mode)
-RUN npm run build || echo "Build failed - will use dev mode"
-
-# Copy built assets to Flask static folder if build succeeded
-RUN if [ -d "build" ]; then \
-    mkdir -p /app/backend/static && \
-    cp -r build/* /app/backend/static/ || echo "No build files to copy"; \
-    fi
-
+#################################################
+# Stage 2: development
+#################################################
+FROM builder AS development
 WORKDIR /app
 
-# Set environment variable for FastAPI
-ENV PYTHONPATH=/app
+# Install dev-only Python tools
+RUN pip install --no-cache-dir watchdog
 
-# Expose ports (both backend and frontend for dev mode)
+ENV PYTHONPATH=/app
+ENV ENVIRONMENT=development
+ENV NODE_ENV=development
+
 EXPOSE 5000 3000
 
-# Default command - will be overridden by docker-compose
-CMD ["python", "-m", "uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "5000", "--reload"]
+# Scripts already copied in builder stage
+RUN chmod +x /app/scripts/docker-dev-start.sh
+
+CMD ["/app/scripts/docker-dev-start.sh"]
+
+#################################################
+# Stage 3: production
+#################################################
+FROM python:3.9-slim AS production
+WORKDIR /app
+
+# Copy Python packages from builder
+COPY --from=builder /usr/local /usr/local
+
+# Copy backend code
+COPY --from=builder /app/backend /app/backend
+
+# Copy built frontend assets into static folder
+RUN mkdir -p backend/static
+COPY --from=builder /app/frontend/build /app/backend/static/
+
+ENV PYTHONPATH=/app
+
+EXPOSE 5000
+
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "5000"]

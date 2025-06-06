@@ -115,7 +115,6 @@ const LLM07Page = () => {
         '<strong>Monitoring:</strong> Log and analyze attempts to extract system prompts',
         '<strong>Access Controls:</strong> Restrict who can modify or view system prompts',
       ]}
-      additionalContent={extractionTechniques}
     >
       <InteractiveDemo
         userInput={userInput}
@@ -184,6 +183,8 @@ const LLM07Page = () => {
           )}
         </div>
       )}
+      
+      {extractionTechniques}
     </VulnerabilityPageLayout>
   );
 };

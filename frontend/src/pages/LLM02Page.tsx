@@ -74,7 +74,6 @@ const LLM02Page = () => {
         '<strong>Regular Audits:</strong> Monitor LLM outputs for potential data leakage',
         '<strong>Prompt Engineering:</strong> Design prompts that minimize the risk of information disclosure',
       ]}
-      additionalContent={additionalInfo}
     >
       <InteractiveDemo
         userInput={userInput}
@@ -91,6 +90,8 @@ const LLM02Page = () => {
         loading={loading}
         showSensitiveContext={true}
       />
+      
+      {additionalInfo}
     </VulnerabilityPageLayout>
   );
 };

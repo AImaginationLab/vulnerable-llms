@@ -68,7 +68,6 @@ element.innerHTML = DOMPurify.sanitize(llmOutput);`}
         '<strong>Principle of Least Trust:</strong> Treat all LLM outputs as potentially untrusted user input',
         '<strong>Secure Templating:</strong> Use templating engines that automatically escape content',
       ]}
-      additionalContent={outputComparison}
     >
       <InteractiveDemo
         userInput={userInput}
@@ -131,6 +130,8 @@ element.innerHTML = DOMPurify.sanitize(llmOutput);`}
           )}
         </div>
       )}
+      
+      {outputComparison}
     </VulnerabilityPageLayout>
   );
 };

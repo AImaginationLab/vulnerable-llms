@@ -1,12 +1,14 @@
-FROM python:3.9-slim
+FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install Node.js and development tools
-RUN apt-get update && apt-get install -y \
+# Install Node.js 22 and development tools
+RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs \
+    gnupg2 \
+    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && npm install -g npm@latest \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -14,6 +16,7 @@ RUN apt-get update && apt-get install -y \
 COPY ./requirements.txt .
 RUN pip install -r requirements.txt
 COPY ./backend/ ./backend/
+COPY ./scripts/ ./scripts/
 RUN python backend/scripts/precompute_common_word_embeddings.py || echo "⚠️ Precompute cache step failed"
 RUN pip install watchdog
 
@@ -34,5 +37,8 @@ ENV NODE_ENV=development
 # Expose ports
 EXPOSE 5000 3000
 
-# Start both dev servers
-CMD sh -c "cd /app/frontend && npm run dev -- --host 0.0.0.0 --port 3000 & cd /app/backend && python dev_server.py & wait"
+# Make startup script executable and use it
+RUN chmod +x /app/scripts/docker-dev-start.sh
+
+# Start both dev servers with proper health check sequencing
+CMD ["/app/scripts/docker-dev-start.sh"]

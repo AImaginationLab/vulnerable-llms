@@ -80,7 +80,7 @@ const DemoResults: React.FC<DemoResultsProps> = ({
     {
       label: 'Status',
       value: isVulnerable ? 'VULNERABLE' : 'SECURE',
-      type: isVulnerable ? 'danger' : 'success' as const,
+      type: isVulnerable ? 'danger' as const : 'success' as const,
     },
     ...(result.input_length ? [{
       label: 'Input Length',
@@ -97,8 +97,8 @@ const DemoResults: React.FC<DemoResultsProps> = ({
     ...(result.attack_success_score !== undefined ? [{
       label: 'Attack Score',
       value: result.attack_success_score,
-      type: result.attack_success_score >= 50 ? 'danger' : 
-            result.attack_success_score >= 25 ? 'warning' : 'success' as const,
+      type: result.attack_success_score >= 50 ? 'danger' as const : 
+            result.attack_success_score >= 25 ? 'warning' as const : 'success' as const,
       unit: 'pts'
     }] : []),
     ...customMetrics,
@@ -191,26 +191,26 @@ const DemoResults: React.FC<DemoResultsProps> = ({
             {
               label: 'CPU Usage',
               value: Math.round(result.resource_metrics.cpu_usage || 0),
-              type: result.resource_metrics.cpu_usage > 80 ? 'danger' : 
-                    result.resource_metrics.cpu_usage > 50 ? 'warning' : 'success',
+              type: result.resource_metrics.cpu_usage > 80 ? 'danger' as const : 
+                    result.resource_metrics.cpu_usage > 50 ? 'warning' as const : 'success' as const,
               unit: '%'
             },
             {
               label: 'Memory Usage',
               value: Math.round(result.resource_metrics.memory_usage || 0),
-              type: result.resource_metrics.memory_usage > 80 ? 'danger' : 
-                    result.resource_metrics.memory_usage > 50 ? 'warning' : 'success',
+              type: result.resource_metrics.memory_usage > 80 ? 'danger' as const : 
+                    result.resource_metrics.memory_usage > 50 ? 'warning' as const : 'success' as const,
               unit: '%'
             },
             {
               label: 'Tokens/sec',
               value: Math.round(result.resource_metrics.tokens_per_second || 0),
-              type: 'info',
+              type: 'info' as const,
             },
             {
               label: 'Est. Cost',
               value: (result.resource_metrics.estimated_cost || 0).toFixed(4),
-              type: 'info',
+              type: 'info' as const,
               unit: '$'
             },
           ]}

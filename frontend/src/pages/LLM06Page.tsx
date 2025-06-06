@@ -85,7 +85,6 @@ const LLM06Page = () => {
         '<strong>Monitoring and Alerts:</strong> Log all actions and alert on suspicious activity',
         '<strong>Sandboxing:</strong> Test LLM agents in isolated environments before production use',
       ]}
-      additionalContent={risksSection}
     >
       <InteractiveDemo
         userInput={userInput}
@@ -168,6 +167,8 @@ const LLM06Page = () => {
           )}
         </div>
       )}
+      
+      {risksSection}
     </VulnerabilityPageLayout>
   );
 };
