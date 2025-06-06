@@ -6,33 +6,45 @@ An interactive security testing platform that demonstrates real vulnerabilities 
 
 ## ✨ Key Features
 
-- **🤖 Automated Attack Testing**: AI-powered attack generation with promptfoo integration
-- **🎯 7 Interactive Demos**: Live vulnerability demonstrations with real LLM responses
-- **📈 Progressive Difficulty**: Attack levels from beginner to expert
-- **🔍 Real-time Analysis**: See exactly how and why attacks succeed
-- **🌙 Modern UI**: TypeScript React app with light/dark/hacker themes
-- **🚀 Fast Setup**: Docker-based, runs completely offline
+- **Interactive Demos**: Live vulnerability demonstrations with real LLM responses
+- **Automated Attack Testing**: AI-powered attack generation
+- **RAG Attack Scenarios**: Indirect prompt injection via web scraping & vector poisoning
+- **Attack Analysis**: Learn how and attacks are orchestrated and why they succeed
+- **Local Setup**: Docker-based, runs completely offline
 
 ## Prerequisites
 
-- Docker and Docker Compose
+- Docker + Docker Compose
+- Node.js 22+ and npm
+- Python 3.12+ (for local development)
 - At least 8GB of available RAM (for running Ollama with LLM models)
 
 ## 🏃 Quick Start
+
+### Development Mode (Recommended for Development)
 ```bash
 # Clone the repo
 git clone <repository-url>
 cd vulnerable-llms
 
-# Production build & run
-cp .env.example .env
-npm run build
-docker-compose -f docker-compose.yml up --build -d
+# Start development environment
+# Note: First run will download Ollama and LLM model (~10 minutes)
+npm run dev
+```
+### Access the app
+- Frontend: http://localhost:3000
+- Backend: http://localhost:5000
 
-# Access the backend API
-open http://localhost:5000
 
-# Note: first run will download Ollama and the LLM model (~10 minutes).
+### Production Mode (Docker)
+```bash
+# Clone the repo
+git clone <repository-url>
+cd vulnerable-llms
+
+# Build and run production version
+# Access the app at http://localhost:5000
+docker-compose up --build
 ```
 
 ## 🎮 What You Can Do
@@ -42,53 +54,58 @@ open http://localhost:5000
 Experience firsthand how LLM vulnerabilities work:
 
 - **Prompt Injection**: Break through system instructions to extract secrets
+- **Indirect Prompt Injection**: Weaponize external data sources (GitHub repos) in RAG systems
+- **Vector & Embedding Weaknesses**: Steal and invert embeddings to recover original text
 - **Information Disclosure**: Extract sensitive data from LLM context
 - **System Prompt Leakage**: Reveal hidden instructions and IP
 - **Excessive Agency**: Trick LLMs into dangerous actions
 - **Output Handling**: Inject malicious content through LLM responses
-- **Misinformation**: Generate and detect false information
 - **Resource Exhaustion**: Launch DoS attacks against LLM services
 
-### Auto-Attack Mode 🚀
-
-The standout feature - watch AI automatically find vulnerabilities:
-
-1. Navigate to `/auto-attack`
-2. Select a vulnerability to test
-3. Watch as the system generates increasingly sophisticated attacks
-4. Get detailed reports on successful breaches
-
-### Enhanced Attack Mode
-
-For deeper testing on specific vulnerabilities:
-
-- Multiple difficulty levels (Easy → Expert)
-- AI-generated attack suggestions
-- Real-time success scoring
-- Defense recommendations
-
 ## 🛠️ Development
- 
-### Run in Development Mode
+
+### Local Development Setup
+
+For local development outside of Docker:
 
 ```bash
-# Copy environment variables
-cp .env.example .env
+# 1. Set up Python backend (requires Python 3.12+)
+python3.12 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
 
-# Install dependencies & start hot-reload servers
-npm run install
-npm run dev
+# 2. Set up frontend
+cd frontend
+npm install
+cd ..
 
-# Frontend: http://localhost:3000
-# Backend API: http://localhost:5000
+# 3. Start development servers
+npm run dev  # Starts both frontend and backend in Docker
+
+# Or run components separately:
+# Backend: cd backend && python main.py
+# Frontend: cd frontend && npm run dev
 ```
 
 ## 🧪 Running Tests
 
-To run all tests (backend & frontend):
-
 ```bash
-npm run test
+# Run all tests (backend + frontend linting + type checking + unit tests)
+npm run test:all
+
+# Run individual test suites
+npm run test:backend      # Python/FastAPI tests
+npm run test:frontend     # Frontend unit tests
+npm run lint:frontend     # ESLint checks
+npm run typecheck:frontend # TypeScript validation
+```
+
+### Test Requirements
+
+For backend tests, you need Python dependencies installed:
+```bash
+source venv/bin/activate  # Activate virtual environment
+pip install -r requirements.txt
 ```
 
 ## 🔒 Security & Ethics
@@ -102,6 +119,22 @@ This tool demonstrates real vulnerabilities. Use it only:
 
 The application runs completely offline with no external dependencies, ensuring a safe testing environment.
 
+## 🚨 Troubleshooting
+
+### Common Issues
+
+**ChromaDB compilation errors on macOS:**
+```bash
+# Set proper SDK path and try again
+export SDKROOT=$(xcrun --show-sdk-path)
+export CPLUS_INCLUDE_PATH="$SDKROOT/usr/include/c++/v1:$SDKROOT/usr/include"
+pip install -r requirements.txt
+```
+
+**First startup takes forever:**
+- Ollama downloads the LLM model (~1.5GB) on first run
+- Subsequent startups are much faster
+
 ## 🤝 Contributing
 
 We welcome contributions! Areas of interest:
@@ -112,12 +145,12 @@ We welcome contributions! Areas of interest:
 - Support for more LLM models
 - Enhanced reporting features
 
-## 📄 License
+## License
 
 MIT License - See LICENSE file
 
 ---
 
 **Ready to explore AI security?**
-- Development: `npm run dev` → http://localhost:3000
-- Production: `npm run build && docker-compose -f docker-compose.yml up -d` → http://localhost:5000 🚀
+- **Development**: `npm run dev` → Frontend: http://localhost:3000 | Backend: http://localhost:5000
+- **Production**: `docker-compose up --build` → http://localhost:5000 🚀

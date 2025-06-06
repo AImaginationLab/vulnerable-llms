@@ -14,6 +14,6 @@ describe('Homepage', () => {
     expect(
       screen.getByText(/AI Security Demonstration Application/i)
     ).toBeInTheDocument();
-    expect(screen.getByText(/OWASP LLM Top 10 2025/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /OWASP LLM Top 10 2025/i })).toBeInTheDocument();
   });
 });
