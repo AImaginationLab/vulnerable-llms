@@ -38,7 +38,7 @@ WORKDIR /app
 # Install dev-only Python tools
 RUN pip install --no-cache-dir watchdog
 
-ENV PYTHONPATH=/app
+ENV PYTHONPATH=/app:/app/backend
 ENV ENVIRONMENT=development
 ENV NODE_ENV=development
 
@@ -52,7 +52,7 @@ CMD ["/app/scripts/docker-dev-start.sh"]
 #################################################
 # Stage 3: production
 #################################################
-FROM python:3.9-slim AS production
+FROM python:3.11-slim AS production
 WORKDIR /app
 
 # Copy Python packages from builder
@@ -65,8 +65,9 @@ COPY --from=builder /app/backend /app/backend
 RUN mkdir -p backend/static
 COPY --from=builder /app/frontend/build /app/backend/static/
 
-ENV PYTHONPATH=/app
+ENV PYTHONPATH=/app:/app/backend
 
 EXPOSE 5000
 
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "5000"]
+WORKDIR /app/backend
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5000"]
