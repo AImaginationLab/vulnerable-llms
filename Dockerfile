@@ -17,8 +17,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy backend and precompute embeddings
+# Copy backend and scripts
 COPY backend/ backend/
+COPY scripts/ scripts/
 RUN python backend/scripts/precompute_common_word_embeddings.py
 
 # Install frontend dependencies and build assets
@@ -43,7 +44,10 @@ ENV NODE_ENV=development
 
 EXPOSE 5000 3000
 
-CMD ["sh", "-c", "cd /app/backend && python dev_server.py & cd /app/frontend && npm run dev -- --host 0.0.0.0 --port 3000"]
+# Scripts already copied in builder stage
+RUN chmod +x /app/scripts/docker-dev-start.sh
+
+CMD ["/app/scripts/docker-dev-start.sh"]
 
 #################################################
 # Stage 3: production

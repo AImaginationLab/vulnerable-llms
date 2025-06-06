@@ -265,6 +265,11 @@ def call_ollama(prompt, system_prompt="You are a helpful assistant.", model="lla
         logger.error(f"Exception traceback: {traceback.format_exc()}")
         return error_msg
 
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for Docker startup verification"""
+    return {"status": "healthy", "service": "vulnerable-llms-backend"}
+
 @app.get("/api/v1/2025/vulnerabilities")
 async def get_vulnerabilities():
     """Get list of OWASP LLM Top 10 vulnerabilities"""

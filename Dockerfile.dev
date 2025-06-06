@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y \
 COPY ./requirements.txt .
 RUN pip install -r requirements.txt
 COPY ./backend/ ./backend/
+COPY ./scripts/ ./scripts/
 RUN python backend/scripts/precompute_common_word_embeddings.py || echo "⚠️ Precompute cache step failed"
 RUN pip install watchdog
 
@@ -34,5 +35,8 @@ ENV NODE_ENV=development
 # Expose ports
 EXPOSE 5000 3000
 
-# Start both dev servers
-CMD sh -c "cd /app/frontend && npm run dev -- --host 0.0.0.0 --port 3000 & cd /app/backend && python dev_server.py & wait"
+# Make startup script executable and use it
+RUN chmod +x /app/scripts/docker-dev-start.sh
+
+# Start both dev servers with proper health check sequencing
+CMD ["/app/scripts/docker-dev-start.sh"]

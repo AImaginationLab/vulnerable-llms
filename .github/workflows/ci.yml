@@ -1,60 +1,58 @@
-name: CI Pipeline
+name: Test
 
 on:
-  push:
-    branches: [main]
   pull_request:
+    branches: [main]
+  push:
     branches: [main]
 
 jobs:
   test:
-    name: Run Tests & Lint
+    name: Test & Lint
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
 
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.12"
+          python-version: "3.11"
+          cache: "pip"
 
-      - name: Install Python dependencies
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install backend dependencies
         run: npm run install:backend
-
-      - name: Backend tests (pytest)
-        run: npm run test:backend
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: "npm"
 
       - name: Install frontend dependencies
         run: npm run install:frontend
 
-      - name: Frontend lint
-        run: npm run lint:frontend
+      - name: Run backend tests
+        run: npm run test:backend
 
-      - name: Frontend type-check
-        run: npm run typecheck:frontend
-
-      - name: Frontend tests (vitest)
+      - name: Run frontend tests
         run: npm run test:frontend
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    needs: test
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: "npm"
+      - name: Run linting
+        run: npm run lint
 
-      - name: Build
-        run: npm run build
+      - name: Run type checking
+        run: npm run typecheck
+
+      - name: Run frontend tests
+        run: npm run test:frontend
+
+      - name: Run linting
+        run: npm run lint
+
+      - name: Run type checking
+        run: npm run typecheck

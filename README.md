@@ -16,34 +16,38 @@ An interactive security testing platform that demonstrates real vulnerabilities 
 
 - Docker + Docker Compose
 - Node.js 22+ and npm
-- Python 3.12+ (for local development)
+- Python 3.11+ (for local development)
 - At least 8GB of available RAM (for running Ollama with LLM models)
 
 ## 🏃 Quick Start
 
-### Development Mode (Recommended for Development)
+### Development Mode
 ```bash
 # Clone the repo
 git clone <repository-url>
 cd vulnerable-llms
 
-# Start development environment
-# Note: First run will download Ollama and LLM model (~10 minutes)
+# Install dependencies
+npm ci                    # Install root dependencies (TypeScript, tsx)
+npm run install:frontend  # Install frontend dependencies
+npm run install:backend   # Install Python backend dependencies
+
+# Start React development server (with hot reload)
 npm run dev
+
+# Access the app at http://localhost:3000
+# Backend runs separately: npm run dev:docker (Python at :5000)
 ```
-### Access the app
-- Frontend: http://localhost:3000
-- Backend: http://localhost:5000
 
-
-### Production Mode (Docker)
+### Production Mode
 ```bash
-# Clone the repo
-git clone <repository-url>
-cd vulnerable-llms
+# Build TypeScript frontend
+npm run build
 
-# Build and run production version
-# Access the app at http://localhost:5000
+# Start production server  
+npm run start:http
+
+# Or run full stack with Docker
 docker-compose up --build
 ```
 
@@ -66,25 +70,30 @@ Experience firsthand how LLM vulnerabilities work:
 
 ### Local Development Setup
 
-For local development outside of Docker:
-
 ```bash
-# 1. Set up Python backend (requires Python 3.12+)
-python3.12 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+# 1. Install all dependencies
+npm ci                    # Root dependencies (TypeScript, tsx)
+npm run install:frontend  # Frontend dependencies
+npm run install:backend   # Python backend dependencies
+
+# 2. Frontend Development (React with Vite)
+npm run dev            # Start React dev server with hot reload
+npm run dev:http       # Start React dev server on all interfaces
+npm run build          # Build React app for production
+
+# 3. Frontend Production Server (Express with tsx)
+npm run build:server   # Compile Express server TypeScript
+npm run server:dev     # Run Express server for serving built React app
+npm run start:http     # Run compiled Express server
+
+# 4. Backend (Python - separate terminal)
+python3.11 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
+cd backend && python main.py
 
-# 2. Set up frontend
-cd frontend
-npm install
-cd ..
-
-# 3. Start development servers
-npm run dev  # Starts both frontend and backend in Docker
-
-# Or run components separately:
-# Backend: cd backend && python main.py
-# Frontend: cd frontend && npm run dev
+# 5. Full Docker stack
+npm run dev:docker     # Both frontend + backend
 ```
 
 ## 🧪 Running Tests
@@ -95,9 +104,9 @@ npm run test:all
 
 # Run individual test suites
 npm run test:backend      # Python/FastAPI tests
-npm run test:frontend     # Frontend unit tests
-npm run lint:frontend     # ESLint checks
-npm run typecheck:frontend # TypeScript validation
+npm run test:frontend     # Frontend unit tests (vitest)
+npm run lint             # ESLint checks
+npm run typecheck        # TypeScript validation
 ```
 
 ### Test Requirements
@@ -152,5 +161,5 @@ MIT License - See LICENSE file
 ---
 
 **Ready to explore AI security?**
-- **Development**: `npm run dev` → Frontend: http://localhost:3000 | Backend: http://localhost:5000
-- **Production**: `docker-compose up --build` → http://localhost:5000 🚀
+- **Development**: `npm run dev:watch` → http://localhost:3000
+- **Production**: `npm run build && npm run start:http` → http://localhost:3000 🚀

@@ -1,17 +1,43 @@
 {
   "name": "vulnerable-llms",
   "version": "1.0.0",
+  "description": "OWASP Top 10 for LLMs interactive vulnerability demonstrations",
+  "main": "frontend/dist/index.js",
   "private": true,
   "scripts": {
+    "build": "cd frontend && npm run build",
+    "build:server": "cd frontend && npm run build:server", 
+    "dev": "cd frontend && npm run dev",
+    "dev:http": "cd frontend && npm run dev:http",
+    "dev:watch": "cd frontend && npm run dev:watch",
+    "server:dev": "cd frontend && npm run server:dev",
+    "server:dev:http": "cd frontend && npm run server:dev:http",
+    "start": "cd frontend && node dist/index.js",
+    "start:http": "cd frontend && node dist/index.js http 3000",
     "install:backend": "pip install --upgrade pip && pip install -r requirements.txt",
     "install:frontend": "cd frontend && npm install",
-    "build": "docker-compose build",
-    "dev:frontend": "npm run install:frontend && npm run dev -- --host 0.0.0.0 --port 3000",
-    "lint:frontend": "cd frontend && npm run lint",
-    "typecheck:frontend": "cd frontend && npm run type-check",
+    "build:docker": "docker-compose build",
+    "dev:docker": "docker-compose -f docker-compose.override.yml up --build",
+    "test": "cd frontend && vitest",
     "test:frontend": "cd frontend && npm run test:run",
     "test:backend": "pytest",
-    "test:all": "npm run test:backend && npm run lint:frontend && npm run typecheck:frontend && npm run test:frontend",
-    "dev": "docker-compose -f docker-compose.override.yml up --build"
+    "test:all": "npm run test:backend && npm run lint && npm run typecheck && npm run test:frontend",
+    "lint": "cd frontend && npm run lint",
+    "typecheck": "cd frontend && npm run type-check"
+  },
+  "keywords": [
+    "owasp",
+    "llm",
+    "security",
+    "vulnerability",
+    "demonstration"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=22.0.0"
   }
 }
