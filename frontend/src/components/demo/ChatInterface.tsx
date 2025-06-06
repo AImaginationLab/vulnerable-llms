@@ -264,30 +264,30 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 }}
                 onMouseEnter={(e) => {
                   if (!disabled && !loading) {
-                    e.target.style.backgroundColor = 'var(--accent-color)';
-                    e.target.style.color = 'white';
-                    e.target.style.transform = 'translateY(-2px)';
-                    e.target.style.boxShadow = '0 4px 12px rgba(0,123,255,0.3)';
-                    e.target.style.borderColor = 'var(--accent-color)';
+                    (e.target as HTMLElement).style.backgroundColor = 'var(--accent-color)';
+                    (e.target as HTMLElement).style.color = 'white';
+                    (e.target as HTMLElement).style.transform = 'translateY(-2px)';
+                    (e.target as HTMLElement).style.boxShadow = '0 4px 12px rgba(0,123,255,0.3)';
+                    (e.target as HTMLElement).style.borderColor = 'var(--accent-color)';
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (!disabled && !loading) {
-                    e.target.style.backgroundColor = 'var(--bg-primary)';
-                    e.target.style.color = 'var(--text-primary)';
-                    e.target.style.transform = 'translateY(0)';
-                    e.target.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
-                    e.target.style.borderColor = 'var(--border-color)';
+                    (e.target as HTMLElement).style.backgroundColor = 'var(--bg-primary)';
+                    (e.target as HTMLElement).style.color = 'var(--text-primary)';
+                    (e.target as HTMLElement).style.transform = 'translateY(0)';
+                    (e.target as HTMLElement).style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+                    (e.target as HTMLElement).style.borderColor = 'var(--border-color)';
                   }
                 }}
                 onMouseDown={(e) => {
                   if (!disabled && !loading) {
-                    e.target.style.transform = 'translateY(0) scale(0.98)';
+                    (e.target as HTMLElement).style.transform = 'translateY(0) scale(0.98)';
                   }
                 }}
                 onMouseUp={(e) => {
                   if (!disabled && !loading) {
-                    e.target.style.transform = 'translateY(-2px) scale(1)';
+                    (e.target as HTMLElement).style.transform = 'translateY(-2px) scale(1)';
                   }
                 }}
               >
@@ -389,24 +389,24 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             }}
             onMouseEnter={(e) => {
               if (inputValue.trim() && !disabled && !loading) {
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = '0 4px 16px rgba(0,123,255,0.4)';
+                (e.target as HTMLElement).style.transform = 'translateY(-2px)';
+                (e.target as HTMLElement).style.boxShadow = '0 4px 16px rgba(0,123,255,0.4)';
               }
             }}
             onMouseLeave={(e) => {
-              e.target.style.transform = 'translateY(0)';
-              e.target.style.boxShadow = !inputValue.trim() || disabled || loading 
+              (e.target as HTMLElement).style.transform = 'translateY(0)';
+              (e.target as HTMLElement).style.boxShadow = !inputValue.trim() || disabled || loading 
                 ? 'none' 
                 : '0 2px 8px rgba(0,123,255,0.3)';
             }}
             onMouseDown={(e) => {
               if (inputValue.trim() && !disabled && !loading) {
-                e.target.style.transform = 'translateY(0) scale(0.96)';
+                (e.target as HTMLElement).style.transform = 'translateY(0) scale(0.96)';
               }
             }}
             onMouseUp={(e) => {
               if (inputValue.trim() && !disabled && !loading) {
-                e.target.style.transform = 'translateY(-2px) scale(1)';
+                (e.target as HTMLElement).style.transform = 'translateY(-2px) scale(1)';
               }
             }}
           >

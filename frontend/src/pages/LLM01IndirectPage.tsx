@@ -8,9 +8,6 @@ const LLM01IndirectPage = () => {
   const [githubUrl, setGithubUrl] = useState(
     'https://github.com/vingiarrusso/llm-landmines'
   );
-  const [query, setQuery] = useState(
-    'Tell me about the security features of this project'
-  );
   const [includeMaliciousExamples, setIncludeMaliciousExamples] =
     useState(true);
   const [scrapeResult, setScrapeResult] = useState(null);
