@@ -4,7 +4,7 @@ echo "🚀 Starting development environment..."
 
 # Start backend in background
 echo "📡 Starting backend server..."
-cd /app/backend && python dev_server.py &
+cd /app/backend && python main.py &
 BACKEND_PID=$!
 
 # Wait for backend to be ready

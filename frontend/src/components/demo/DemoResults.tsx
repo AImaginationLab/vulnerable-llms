@@ -33,6 +33,7 @@ interface DemoResultsProps {
   loading?: boolean;
   showSystemPrompt?: boolean;
   showSensitiveContext?: boolean;
+  showMetrics?: boolean;
   customMetrics?: Array<{
     label: string;
     value: string | number;
@@ -47,6 +48,7 @@ const DemoResults: React.FC<DemoResultsProps> = ({
   loading = false,
   showSystemPrompt = true,
   showSensitiveContext = false,
+  showMetrics = true,
   customMetrics = [],
   additionalPanels = [],
 }) => {
@@ -177,7 +179,7 @@ const DemoResults: React.FC<DemoResultsProps> = ({
       )}
 
       {/* Metrics */}
-      {standardMetrics.length > 0 && (
+      {showMetrics && standardMetrics.length > 0 && (
         <MetricsDisplay
           metrics={standardMetrics}
           title="📊 Analysis Results"

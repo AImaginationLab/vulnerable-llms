@@ -30,7 +30,7 @@ RUN npm install
 WORKDIR /app
 
 # Set environment variables
-ENV PYTHONPATH=/app
+ENV PYTHONPATH=/app:/app/backend
 ENV ENVIRONMENT=development
 ENV NODE_ENV=development
 

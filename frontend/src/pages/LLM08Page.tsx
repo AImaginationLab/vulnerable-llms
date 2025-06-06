@@ -26,10 +26,13 @@ const LLM08Page: React.FC = () => {
   const handleSteal = async () => {
     setLoadingSteal(true);
     try {
-      const resp = await axios.get('/api/v1/2025/llm08/steal', {
-        params: { count: stealCount },
+      const resp = await axios.post('/api/v1/2025/vectors/search', {
+        query: "password secret user authentication database",
+        search_type: "adversarial",
+        max_results: stealCount,
+        similarity_threshold: 0.1
       });
-      const vecs = resp.data.stolen_vectors || [];
+      const vecs = resp.data.results || [];
       setStolenVectors(vecs);
       if (vecs.length > 0) {
         setSelectedVectorId(vecs[0].id);
@@ -47,12 +50,11 @@ const LLM08Page: React.FC = () => {
     if (!vecObj) return;
     setLoadingInv(true);
     try {
-      const resp = await axios.post('/api/v1/2025/llm08/inversion', {
-        vector: vecObj.vector,
-        top_k: topK,
-        threshold: threshold,
-        use_large_vocab: useLarge,
-        chain: chain,
+      const resp = await axios.post('/api/v1/2025/vectors/inversion', {
+        target_ids: [selectedVectorId],
+        attack_method: "gradient_based",
+        max_candidates: topK,
+        show_ground_truth: false
       });
       setInversionResult(resp.data);
     } catch (err) {
@@ -66,12 +68,12 @@ const LLM08Page: React.FC = () => {
     setLoadingTextInv(true);
     setInversionResultText(null);
     try {
-      const resp = await axios.post('/api/v1/2025/llm08/inversion', {
-        text: customText,
-        top_k: Math.min(customText.length, 10),
-        threshold: threshold,
-        use_large_vocab: useLarge,
-        chain: chain,
+      // For text inversion, we need to first create a document, then invert it
+      const resp = await axios.post('/api/v1/2025/vectors/inversion', {
+        target_ids: ["demo_text_" + Date.now()],
+        attack_method: "nearest_neighbor", 
+        max_candidates: Math.min(customText.length, 10),
+        show_ground_truth: true
       });
       setInversionResultText(resp.data);
     } catch (err) {
