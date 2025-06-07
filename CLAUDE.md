@@ -124,6 +124,7 @@ npm run test:all       # All tests (backend + frontend)
 - Test all changes before considering tasks complete
 - Always run `npm run lint` and `npm run typecheck` before committing
 - Use the health check endpoints to verify system status
+- **IMPORTANT**: Always use `source venv/bin/activate` before running Python commands (pytest, python, pip, etc.)
 
 ## UI/UX Patterns
 
@@ -134,7 +135,7 @@ When converting demo pages to use ChatInterface:
    - `ChatInterface` - Basic chat with suggestions
    - `EnhancedChatInterface` - Chat with attack levels, system prompt reveal
 3. **Preserve functionality**: Ensure all features work (analysis, metadata, etc)
-4. **API Integration**: 
+4. **API Integration**:
    - Basic demos can use simple endpoints
    - Advanced demos should conditionally use enhanced APIs based on difficulty
 
@@ -151,15 +152,6 @@ When converting demo pages to use ChatInterface:
 - Multiple demo variations → Single page with dynamic behavior
 - Separate results sections → Integrated chat responses with analysis
 - InteractiveDemo component → ChatInterface (preserves all functionality)
-
-### Migration Checklist
-When migrating pages using InteractiveDemo to ChatInterface:
-1. Replace InteractiveDemo with ChatInterface
-2. Convert onExecute handler to async chat message handler
-3. Build messages array from user input and LLM response
-4. Keep existing suggestions if present
-5. Preserve any special result displays (alerts, analyses)
-6. Test that all functionality still works
 
 ### Special Cases
 - **Complex multi-input demos** (like LLM08): May need custom UI, not suitable for ChatInterface
