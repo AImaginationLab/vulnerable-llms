@@ -6,7 +6,7 @@
   "private": true,
   "scripts": {
     "build": "cd frontend && npm run build",
-    "build:server": "cd frontend && npm run build:server", 
+    "build:server": "cd frontend && npm run build:server",
     "dev": "cd frontend && npm run dev",
     "dev:http": "cd frontend && npm run dev:http",
     "dev:watch": "cd frontend && npm run dev:watch",
