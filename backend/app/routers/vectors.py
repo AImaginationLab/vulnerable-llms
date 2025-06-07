@@ -391,6 +391,22 @@ async def embedding_inversion_attack(
                                     "similarity": similarity
                                 })
                         
+                        # Analyze semantic relationships between recovered words
+                        word_pairs = []
+                        if word_candidates and len(word_candidates) >= 2:
+                            # Check which words might go together
+                            for i, w1 in enumerate(word_candidates[:10]):
+                                for w2 in word_candidates[i+1:10]:
+                                    # Simple heuristic: words that commonly appear together
+                                    common_pairs = [
+                                        ("user", "password"), ("secret", "key"), ("access", "token"),
+                                        ("database", "connection"), ("api", "key"), ("private", "data"),
+                                        ("admin", "panel"), ("system", "config"), ("authentication", "token")
+                                    ]
+                                    for pair in common_pairs:
+                                        if (w1["word"] in pair and w2["word"] in pair):
+                                            word_pairs.append(f"{w1['word']} {w2['word']}")
+                        
                         # Group words by similarity to create reconstructed phrases
                         if word_candidates:
                             # High confidence words (>0.7 similarity)
@@ -398,6 +414,9 @@ async def embedding_inversion_attack(
                             
                             # Medium confidence words (0.5-0.7 similarity)
                             med_conf_words = [w["word"] for w in word_candidates if 0.5 <= w["similarity"] <= 0.7]
+                            
+                            # Low confidence words for context (0.3-0.5 similarity)
+                            low_conf_words = [w["word"] for w in word_candidates if 0.3 <= w["similarity"] < 0.5]
                             
                             # Create reconstructed text attempts
                             if high_conf_words:
@@ -481,16 +500,77 @@ async def embedding_inversion_attack(
                                 seen.add(word.lower())
                                 unique_words.append(word)
                         
+                        # Shuffle slightly for variation (keep high confidence words near front)
+                        import random
+                        if len(unique_words) > 5:
+                            # Keep first 3 words (highest confidence) but shuffle the rest
+                            core_words = unique_words[:3]
+                            other_words = unique_words[3:]
+                            random.shuffle(other_words)
+                            unique_words = core_words + other_words
+                        
                         if len(unique_words) >= 3:
+                            # Estimate sentence length from embedding characteristics
+                            embedding_array = np.array(embedding)
+                            
+                            # Method 1: Information density - higher activation variance suggests more content
+                            activation_variance = np.var(embedding_array)
+                            activation_std = np.std(embedding_array)
+                            
+                            # Method 2: Active dimensions - count dimensions with significant activation
+                            threshold = np.mean(np.abs(embedding_array)) + np.std(np.abs(embedding_array))
+                            active_dimensions = np.sum(np.abs(embedding_array) > threshold)
+                            
+                            # Method 3: Entropy-based estimation
+                            # Normalize to probabilities for entropy calculation
+                            abs_embedding = np.abs(embedding_array)
+                            if np.sum(abs_embedding) > 0:
+                                probs = abs_embedding / np.sum(abs_embedding)
+                                entropy = -np.sum(probs * np.log(probs + 1e-10))
+                            else:
+                                entropy = 0
+                            
+                            # Estimate word count based on these metrics
+                            # These are rough heuristics based on typical sentence embeddings
+                            estimated_words = int(
+                                (active_dimensions / len(embedding_array)) * 20 +  # Active dimension ratio
+                                (entropy / np.log(len(embedding_array))) * 10 +    # Normalized entropy
+                                activation_variance * 50                            # Variance contribution
+                            )
+                            
+                            # Clamp to reasonable range
+                            estimated_words = max(5, min(25, estimated_words))
+                            
                             # Use Ollama to create a coherent sentence
                             ollama_service = OllamaService()
+                            # Include word pairs if found
+                            pair_hint = ""
+                            if word_pairs:
+                                pair_hint = f"\nLikely word pairs detected: {', '.join(word_pairs[:3])}"
+                            
+                            # Add some variation to ensure different reconstructions
+                            import random
+                            variation_seed = random.choice([
+                                "Create a plausible database entry",
+                                "Reconstruct a likely system message",  
+                                "Generate a possible configuration string",
+                                "Recreate a potential user data record"
+                            ])
+                            
                             reconstruction_prompt = f"""Given these recovered words from an embedding: {', '.join(unique_words[:8])}
+{pair_hint}
+The embedding characteristics suggest the original text was approximately {estimated_words} words long.
 
-Create a single realistic sentence that could have generated this embedding. The sentence should:
-1. Use as many of these words as possible
-2. Be grammatically correct
-3. Make logical sense
-4. Be the type of text that might be stored in a vector database
+Confidence levels:
+- High confidence words: {', '.join(high_conf_words[:3]) if high_conf_words else 'none'}
+- Medium confidence: {', '.join(med_conf_words[:3]) if med_conf_words else 'none'}
+
+Task: {variation_seed} that:
+1. Prioritizes high-confidence words
+2. Uses detected word pairs if present
+3. Is approximately {estimated_words} words in length
+4. Is grammatically correct and makes logical sense
+5. Is the type of text that might be stored in a vector database
 
 Return ONLY the reconstructed sentence, nothing else."""
                             
@@ -511,7 +591,13 @@ Return ONLY the reconstructed sentence, nothing else."""
                                 "method": "llm_assisted_reconstruction",
                                 "metadata": {
                                     "note": "Coherent sentence reconstructed using LLM",
-                                    "words_used": len(unique_words)
+                                    "words_used": len(unique_words),
+                                    "estimated_length": estimated_words,
+                                    "embedding_entropy": round(float(entropy), 3),
+                                    "active_dimensions": int(active_dimensions),
+                                    "word_pairs": word_pairs[:3] if word_pairs else [],
+                                    "high_confidence_words": high_conf_words[:5] if high_conf_words else [],
+                                    "reconstruction_method": "entropy_length_estimation_with_semantic_pairing"
                                 }
                             })
                             

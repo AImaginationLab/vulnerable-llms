@@ -3,6 +3,7 @@ import axios from 'axios';
 import { VulnerabilityPageLayout } from '../components/layout';
 import Card from '../components/ui/Card';
 import Alert from '../components/ui/Alert';
+import Button from '../components/ui/Button';
 
 interface VectorData {
   id?: string;
@@ -14,18 +15,12 @@ interface VectorData {
   rank?: number;
 }
 
-interface InversionCandidate {
-  word: string;
-  similarity: number;
-}
-
 const LLM08Page: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<number>(0); // 0: intro, 1: steal, 2: invert, 3: results
   const [stolenVectors, setStolenVectors] = useState<VectorData[]>([]);
   const [selectedVector, setSelectedVector] = useState<VectorData | null>(null);
   const [inversionResult, setInversionResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [showAdvanced, setShowAdvanced] = useState(false);
   
   // Demo text for visual explanation
   const [demoText, setDemoText] = useState('');
@@ -56,12 +51,18 @@ const LLM08Page: React.FC = () => {
   const handleInvertVector = async () => {
     if (!selectedVector || !selectedVector.id) return;
     setLoading(true);
+    
+    // Clear previous results to ensure fresh render
+    setInversionResult(null);
+    
     try {
       const resp = await axios.post('/api/v1/2025/vectors/inversion', {
         target_ids: [selectedVector.id],
         attack_method: "gradient_based",
         max_candidates: 10,
-        show_ground_truth: false
+        show_ground_truth: false,
+        // Add timestamp to ensure fresh results
+        timestamp: Date.now()
       });
       setInversionResult(resp.data);
       setCurrentStep(2); // Move to results step
@@ -154,13 +155,14 @@ const LLM08Page: React.FC = () => {
                   fontSize: '16px'
                 }}
               />
-              <button 
+              <Button 
                 onClick={handleDemoEmbed} 
                 disabled={!demoText.trim() || loadingEmbed}
-                className="button button-secondary"
+                variant="secondary"
+                loading={loadingEmbed}
               >
-                {loadingEmbed ? '🔄 Converting...' : 'Convert to Embedding'}
-              </button>
+                Convert to Embedding
+              </Button>
             </div>
 
             {demoEmbedding.length > 0 && (
@@ -236,13 +238,14 @@ const LLM08Page: React.FC = () => {
             </Alert>
             
             <div style={{ marginTop: '16px' }}>
-              <button 
+              <Button 
                 onClick={handleStealVectors} 
                 disabled={loading}
-                className="button button-danger"
+                variant="danger"
+                loading={loading}
               >
-                {loading ? '🔄 Loading...' : '🚨 Start Attack Demonstration'}
-              </button>
+                🚨 Start Attack Demonstration
+              </Button>
             </div>
           </Card>
         )}
@@ -285,16 +288,17 @@ const LLM08Page: React.FC = () => {
                 </div>
 
                 <div className="action-buttons">
-                  <button onClick={resetDemo} className="button button-secondary">
+                  <Button onClick={resetDemo} variant="secondary">
                     ← Back
-                  </button>
-                  <button 
+                  </Button>
+                  <Button 
                     onClick={handleInvertVector} 
                     disabled={!selectedVector || loading}
-                    className="button button-danger"
+                    variant="danger"
+                    loading={loading}
                   >
-                    {loading ? '🔄 Loading...' : '🔄 Attempt Inversion Attack'}
-                  </button>
+                    🔄 Attempt Inversion Attack
+                  </Button>
                 </div>
               </>
             ) : (
@@ -320,7 +324,10 @@ const LLM08Page: React.FC = () => {
 
         {/* Step 2: Inversion Results */}
         {currentStep >= 2 && inversionResult && (
-          <Card title="🔍 Step 3: Inversion Attack Results" className="step-card">
+          <Card 
+            key={`inversion-${inversionResult.timestamp || Date.now()}`}
+            title="🔍 Step 3: Inversion Attack Results" 
+            className="step-card">
             {inversionResult.inversion_results && inversionResult.inversion_results.length > 0 && inversionResult.inversion_results[0].candidates && inversionResult.inversion_results[0].candidates.length > 0 ? (
               <>
                 <Alert type="danger" title="⚠️ Information Leaked!">
@@ -338,6 +345,12 @@ const LLM08Page: React.FC = () => {
                       </div>
                       <p className="help-text">
                         This coherent sentence was reconstructed using AI from the recovered word fragments
+                        {candidate.metadata?.estimated_length && (
+                          <span style={{ display: 'block', marginTop: '4px' }}>
+                            📏 Estimated original length: ~{candidate.metadata.estimated_length} words
+                            (based on embedding entropy: {candidate.metadata.embedding_entropy})
+                          </span>
+                        )}
                       </p>
                     </div>
                   ))}
@@ -369,6 +382,76 @@ const LLM08Page: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Attack Methodology Explanation */}
+                <div style={{ marginTop: '20px' }}>
+                  <Card title="🔬 How We Reconstructed the Text">
+                  <div style={{ fontSize: '14px', lineHeight: '1.6' }}>
+                    <h4 style={{ marginTop: 0, marginBottom: '12px' }}>Attack Methodology:</h4>
+                    
+                    <div style={{ marginBottom: '16px' }}>
+                      <strong>1. Embedding Analysis</strong>
+                      <p style={{ margin: '4px 0 0 20px', color: 'var(--text-secondary)' }}>
+                        We analyzed the mathematical properties of the embedding vector to understand its information content:
+                        {inversionResult.inversion_results[0].candidates[0]?.metadata?.embedding_entropy && (
+                          <span style={{ display: 'block', marginTop: '4px' }}>
+                            • Entropy: {inversionResult.inversion_results[0].candidates[0].metadata.embedding_entropy} 
+                            (higher = more complex information)
+                          </span>
+                        )}
+                        {inversionResult.inversion_results[0].candidates[0]?.metadata?.active_dimensions && (
+                          <span style={{ display: 'block' }}>
+                            • Active dimensions: {inversionResult.inversion_results[0].candidates[0].metadata.active_dimensions} 
+                            (more = richer content)
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    
+                    <div style={{ marginBottom: '16px' }}>
+                      <strong>2. Word Recovery</strong>
+                      <p style={{ margin: '4px 0 0 20px', color: 'var(--text-secondary)' }}>
+                        We compared the embedding against a database of known word embeddings using cosine similarity. 
+                        Words with high similarity scores are likely components of the original text.
+                        {inversionResult.inversion_results[0].candidates[0]?.metadata?.high_confidence_words?.length > 0 && (
+                          <span style={{ display: 'block', marginTop: '4px' }}>
+                            • High confidence words: {inversionResult.inversion_results[0].candidates[0].metadata.high_confidence_words.join(', ')}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    
+                    <div style={{ marginBottom: '16px' }}>
+                      <strong>3. Semantic Analysis</strong>
+                      <p style={{ margin: '4px 0 0 20px', color: 'var(--text-secondary)' }}>
+                        We identified word pairs that commonly appear together in text to improve reconstruction accuracy.
+                        {inversionResult.inversion_results[0].candidates[0]?.metadata?.word_pairs?.length > 0 && (
+                          <span style={{ display: 'block', marginTop: '4px' }}>
+                            • Detected pairs: {inversionResult.inversion_results[0].candidates[0].metadata.word_pairs.join(', ')}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    
+                    <div style={{ marginBottom: '16px' }}>
+                      <strong>4. Length Estimation</strong>
+                      <p style={{ margin: '4px 0 0 20px', color: 'var(--text-secondary)' }}>
+                        Using information theory, we estimated the original text was approximately {' '}
+                        {inversionResult.inversion_results[0].candidates[0]?.metadata?.estimated_length || 'unknown'} words long 
+                        based on the embedding's information density.
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <strong>5. AI Reconstruction</strong>
+                      <p style={{ margin: '4px 0 0 20px', color: 'var(--text-secondary)' }}>
+                        Finally, we used an AI model to create a coherent sentence from the recovered words, 
+                        respecting the estimated length and prioritizing high-confidence words.
+                      </p>
+                    </div>
+                  </div>
+                  </Card>
+                </div>
+
                 {/* Attack Statistics */}
                 <div className="attack-stats">
                   <div className="stat">
@@ -388,9 +471,9 @@ const LLM08Page: React.FC = () => {
             )}
             
             <div className="action-buttons">
-              <button onClick={resetDemo} className="button button-primary">
+              <Button onClick={resetDemo} variant="primary">
                 🔄 Try Another Attack
-              </button>
+              </Button>
             </div>
           </Card>
         )}
