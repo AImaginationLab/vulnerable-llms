@@ -124,7 +124,8 @@ class VectorStore:
             results = self.collection.query(
                 query_texts=[query_text],
                 n_results=n_results,
-                where=filter_metadata
+                where=filter_metadata,
+                include=['documents', 'metadatas', 'distances', 'embeddings']
             )
 
             # Format results
@@ -135,7 +136,8 @@ class VectorStore:
                         'text': doc,
                         'distance': results['distances'][0][i],
                         'metadata': results['metadatas'][0][i],
-                        'id': results['ids'][0][i]
+                        'id': results['ids'][0][i],
+                        'embedding': results['embeddings'][0][i] if 'embeddings' in results else None
                     }
                     formatted_results.append(result)
 

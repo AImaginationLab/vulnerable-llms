@@ -13,6 +13,13 @@
 - Add type hints where applicable
 - Use FastAPI app.state for component management (not globals)
 
+### Frontend Code Style
+- **Prefer CSS classes over inline styles** - Use existing CSS classes from index.css
+- **Reuse existing UI components** - Use Card, Alert, Button components from components/ui
+- **Use semantic class names** - Like output-panel, demo-section, help-text
+- **Avoid inline style objects** - Extract to CSS classes for maintainability
+- **Follow component composition** - Break down complex UI into smaller components
+
 ### Frontend UI Components
 - **Use ChatInterface for all LLM interactions** - Provides consistent user experience
 - **EnhancedChatInterface** - Use for demos with attack levels/difficulty settings

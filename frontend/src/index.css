@@ -892,3 +892,110 @@ body {
   border-color: var(--success-color);
   box-shadow: 0 0 10px var(--success-color);
 }
+
+/* Embedding Visualization */
+.embedding-visualization {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+
+.embedding-value {
+  display: inline-block;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 14px;
+  font-weight: bold;
+  transition: all 0.3s ease;
+  border: 1px solid;
+}
+
+.embedding-value.positive {
+  background: rgba(59, 130, 246, 0.2);
+  color: #3b82f6;
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.embedding-value.negative {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.help-text {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 12px;
+}
+
+.candidate-card {
+  padding: 16px;
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  margin-bottom: 12px;
+  transition: all 0.2s ease;
+}
+
+.candidate-card.high-confidence {
+  border-color: var(--danger-color);
+  border-width: 2px;
+}
+
+.candidate-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.candidate-text {
+  font-weight: bold;
+  font-size: 18px;
+  color: var(--text-primary);
+}
+
+.candidate-confidence {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.confidence-high {
+  color: var(--danger-color);
+}
+
+.confidence-medium {
+  color: var(--warning-color);
+}
+
+.confidence-low {
+  color: var(--text-muted);
+}
+
+.word-match-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.word-match {
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  text-align: center;
+  background: var(--bg-tertiary);
+}
+
+.word-match-text {
+  font-weight: bold;
+  font-size: 16px;
+  color: var(--text-primary);
+}
+
+.word-match-score {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
