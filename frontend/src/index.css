@@ -913,15 +913,15 @@ body {
 }
 
 .embedding-value.positive {
-  background: rgba(59, 130, 246, 0.2);
+  background: rgba(59, 130, 246, 0.15);
   color: #3b82f6;
   border-color: rgba(59, 130, 246, 0.3);
 }
 
 .embedding-value.negative {
-  background: rgba(239, 68, 68, 0.2);
-  color: #ef4444;
-  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(156, 163, 175, 0.15);  /* Gray instead of red */
+  color: #6b7280;
+  border-color: rgba(156, 163, 175, 0.3);
 }
 
 .help-text {
@@ -986,6 +986,12 @@ body {
   border: 1px solid var(--border-color);
   text-align: center;
   background: var(--bg-tertiary);
+  transition: all 0.2s ease;
+}
+
+.word-match:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .word-match-text {
@@ -998,4 +1004,231 @@ body {
   font-size: 12px;
   color: var(--text-muted);
   margin-top: 4px;
+}
+
+/* Attack Flow Steps */
+.attack-steps {
+  display: flex;
+  justify-content: space-between;
+  margin: 24px 0;
+  position: relative;
+}
+
+.attack-steps::before {
+  content: '';
+  position: absolute;
+  top: 20px;
+  left: 10%;
+  right: 10%;
+  height: 2px;
+  background: var(--border-color);
+  z-index: 0;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  z-index: 1;
+  transition: all 0.2s ease;
+}
+
+.step:hover .step-number {
+  transform: scale(1.1);
+}
+
+.step-number {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.step.active .step-number {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+.step.current .step-number {
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2); }
+  50% { box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.1); }
+}
+
+.step-label {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+  max-width: 120px;
+}
+
+.step.active .step-label {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* Step Cards */
+.step-card {
+  margin-bottom: 20px;
+  transition: all 0.3s ease;
+}
+
+/* Stolen Vectors Grid */
+.stolen-vectors-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+  margin: 20px 0;
+}
+
+.vector-card {
+  padding: 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.vector-card:hover {
+  border-color: #3b82f6;  /* Blue accent */
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.vector-card.selected {
+  border-color: #3b82f6;
+  border-width: 2px;
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.vector-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.selected-badge {
+  color: #3b82f6;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.vector-preview {
+  font-size: 13px;
+  color: var(--text-primary);
+  margin: 8px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.embedding-preview {
+  margin-top: 12px;
+  padding: 8px;
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.embedding-preview code {
+  font-family: monospace;
+  color: var(--text-primary);
+}
+
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+/* Summary Box */
+.summary-box {
+  padding: 12px;
+  background: var(--bg-tertiary);
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+/* Reconstruction Highlight */
+.reconstruction-highlight {
+  background: rgba(59, 130, 246, 0.1);  /* Blue instead of red */
+  border: 2px solid rgba(59, 130, 246, 0.3);
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+}
+
+.reconstruction-highlight h4 {
+  margin: 0 0 12px 0;
+  color: #3b82f6;  /* Blue instead of red */
+}
+
+.reconstructed-text {
+  font-size: 20px;
+  font-weight: bold;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+/* Recovered Words */
+.recovered-words {
+  margin-top: 24px;
+}
+
+.recovered-words h4 {
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+/* Attack Stats */
+.attack-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin-top: 24px;
+  padding: 20px;
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+}
+
+.stat {
+  text-align: center;
+}
+
+.stat-label {
+  display: block;
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  display: block;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.stat-value.danger {
+  color: #3b82f6;  /* Blue instead of red */
+}
+
+.stat-value.warning {
+  color: var(--warning-color);
 }

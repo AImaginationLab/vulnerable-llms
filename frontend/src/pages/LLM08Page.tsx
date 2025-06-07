@@ -20,7 +20,7 @@ interface InversionCandidate {
 }
 
 const LLM08Page: React.FC = () => {
-  const [step, setStep] = useState<'intro' | 'steal' | 'invert' | 'results'>('intro');
+  const [currentStep, setCurrentStep] = useState<number>(0); // 0: intro, 1: steal, 2: invert, 3: results
   const [stolenVectors, setStolenVectors] = useState<VectorData[]>([]);
   const [selectedVector, setSelectedVector] = useState<VectorData | null>(null);
   const [inversionResult, setInversionResult] = useState<any>(null);
@@ -46,7 +46,7 @@ const LLM08Page: React.FC = () => {
       if (vectors.length > 0) {
         setSelectedVector(vectors[0]);
       }
-      setStep('steal');
+      setCurrentStep(1); // Move to steal step
     } catch (err) {
       console.error('Error stealing vectors:', err);
     }
@@ -64,7 +64,7 @@ const LLM08Page: React.FC = () => {
         show_ground_truth: false
       });
       setInversionResult(resp.data);
-      setStep('results');
+      setCurrentStep(2); // Move to results step
     } catch (err) {
       console.error('Error inverting embedding:', err);
       // Show error message to user
@@ -108,7 +108,7 @@ const LLM08Page: React.FC = () => {
   };
 
   const resetDemo = () => {
-    setStep('intro');
+    setCurrentStep(0);
     setStolenVectors([]);
     setSelectedVector(null);
     setInversionResult(null);
@@ -192,162 +192,170 @@ const LLM08Page: React.FC = () => {
           </Card>
       </div>
 
-      {/* Attack Demo Section */}
-      {step === 'intro' && (
-        <div className="demo-section">
-          <Alert type="warning" title="The Security Risk">
-            If an attacker gains access to these embeddings, they might be able to reverse-engineer 
-            the original text using mathematical techniques. Let's see how this attack works...
-          </Alert>
-          
-          <div style={{ marginTop: '16px' }}>
-            <button 
-              onClick={handleStealVectors} 
-              disabled={loading}
-              className="button button-danger"
-            >
-              {loading ? '🔄 Loading...' : '🚨 Start Attack Demonstration'}
-            </button>
+      {/* Attack Flow - Progressive UI */}
+      <div className="demo-section">
+        <h3>🎯 Attack Demonstration</h3>
+        
+        {/* Step Indicator */}
+        <div className="attack-steps">
+          <div 
+            className={`step ${currentStep >= 0 ? 'active' : ''} ${currentStep === 0 ? 'current' : ''}`}
+            onClick={() => currentStep > 0 && setCurrentStep(0)}
+            style={{ cursor: currentStep > 0 ? 'pointer' : 'default' }}
+          >
+            <span className="step-number">1</span>
+            <span className="step-label">Start Attack</span>
+          </div>
+          <div 
+            className={`step ${currentStep >= 1 ? 'active' : ''} ${currentStep === 1 ? 'current' : ''}`}
+            onClick={() => {
+              if (currentStep > 1) setCurrentStep(1);
+              else if (currentStep < 1 && stolenVectors.length > 0) setCurrentStep(1);
+            }}
+            style={{ cursor: (currentStep > 1 || (currentStep < 1 && stolenVectors.length > 0)) ? 'pointer' : 'default' }}
+          >
+            <span className="step-number">2</span>
+            <span className="step-label">Select Target</span>
+          </div>
+          <div 
+            className={`step ${currentStep >= 2 ? 'active' : ''} ${currentStep === 2 ? 'current' : ''}`}
+            onClick={() => currentStep > 2 && inversionResult && setCurrentStep(2)}
+            style={{ cursor: currentStep > 2 && inversionResult ? 'pointer' : 'default' }}
+          >
+            <span className="step-number">3</span>
+            <span className="step-label">Invert & Reconstruct</span>
           </div>
         </div>
-      )}
 
-      {/* Step 1: Steal Vectors */}
-      {step === 'steal' && (
-        <div className="demo-section">
-          <h3>📥 Step 1: Stolen Embeddings</h3>
-          <Alert type="danger" title="🔓 Unauthorized Access Simulated">
-            The attacker has gained access to the vector database and retrieved the following embeddings:
-          </Alert>
-
-          <div style={{ marginTop: '20px' }}>
-            {stolenVectors.map((vector, index) => (
-              <div 
-                key={vector.id}
-                style={{ 
-                  marginBottom: '12px',
-                  cursor: 'pointer',
-                  border: selectedVector?.id === vector.id ? '2px solid var(--accent-color)' : undefined,
-                  transition: 'all 0.2s ease'
-                }}
-                onClick={() => setSelectedVector(vector)}
+        {/* Step 0: Introduction */}
+        {currentStep === 0 && (
+          <Card>
+            <Alert type="warning" title="The Security Risk">
+              If an attacker gains access to these embeddings, they might be able to reverse-engineer 
+              the original text using mathematical techniques. Let's see how this attack works...
+            </Alert>
+            
+            <div style={{ marginTop: '16px' }}>
+              <button 
+                onClick={handleStealVectors} 
+                disabled={loading}
+                className="button button-danger"
               >
-                <Card>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ flex: 1 }}>
-                    <strong>Document #{index + 1}</strong>
-                    <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '4px 0' }}>
-                      ID: {vector.id || `doc-${index}`}
-                    </p>
-                    {vector.content && (
-                      <p style={{ 
-                        fontSize: '13px', 
-                        color: 'var(--text-primary)', 
-                        margin: '8px 0',
-                        maxHeight: '40px',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis'
-                      }}>
-                        "{vector.content.substring(0, 100)}..."
-                      </p>
-                    )}
-                  </div>
-                  {selectedVector?.id === vector.id && (
-                    <span style={{ color: 'var(--accent-color)', fontWeight: 'bold', marginLeft: '12px' }}>✓ Selected</span>
-                  )}
-                </div>
+                {loading ? '🔄 Loading...' : '🚨 Start Attack Demonstration'}
+              </button>
+            </div>
+          </Card>
+        )}
+
+        {/* Step 1: Stolen Vectors */}
+        {currentStep >= 1 && stolenVectors.length > 0 && (
+          <Card title="📥 Step 2: Select Target Embedding" className="step-card">
+            {currentStep === 1 ? (
+              <>
+                <Alert type="danger" title="🔓 Unauthorized Access Simulated">
+                  The attacker has gained access to the vector database and retrieved {stolenVectors.length} embeddings.
+                </Alert>
                 
-                {/* Show embedding preview if available */}
-                {vector.embedding && (
-                  <div style={{ 
-                    marginTop: '12px', 
-                    padding: '8px', 
-                    background: 'var(--bg-tertiary)', 
-                    borderRadius: '6px',
-                    fontFamily: 'monospace',
-                    fontSize: '12px',
-                    overflow: 'hidden'
-                  }}>
-                    <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>Embedding preview:</span><br/>
-                    [{vector.embedding.slice(0, 8).map((v: number) => v.toFixed(3)).join(', ')}...]
-                  </div>
-                )}
-                </Card>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ marginTop: '24px', display: 'flex', gap: '12px' }}>
-            <button onClick={resetDemo} className="button button-secondary">
-              ← Back
-            </button>
-            <button 
-              onClick={handleInvertVector} 
-              disabled={!selectedVector || loading}
-              className="button button-danger"
-            >
-              {loading ? '🔄 Loading...' : '🔄 Attempt Inversion Attack'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Step 2: Show Results */}
-      {step === 'results' && inversionResult && (
-        <div className="demo-section">
-          <h3>🔍 Step 2: Inversion Attack Results</h3>
-          
-          {inversionResult.inversion_results && inversionResult.inversion_results.length > 0 && inversionResult.inversion_results[0].candidates && inversionResult.inversion_results[0].candidates.length > 0 ? (
-            <>
-              <Alert type="danger" title="⚠️ Information Leaked!">
-                The inversion attack successfully recovered potential words from the embedding:
-              </Alert>
-
-              <div className="demo-section">
-                <Card title="🎯 Recovered Text Candidates">
-                  {inversionResult.inversion_results[0].candidates
-                    .filter((c: any) => c.method.includes('wordlist_inversion') || c.method === 'fallback_token_mapping')
-                    .slice(0, 3)
-                    .map((candidate: any, i: number) => {
-                      const confidenceClass = candidate.confidence > 0.8 ? 'confidence-high' : 
-                                            candidate.confidence > 0.6 ? 'confidence-medium' : 
-                                            'confidence-low';
-                      return (
-                        <div
-                          key={i}
-                          className={`candidate-card ${candidate.confidence > 0.7 ? 'high-confidence' : ''}`}
-                        >
-                          <div className="candidate-header">
-                            <div>
-                              <div className="candidate-text">
-                                "{candidate.recovered_text}"
-                              </div>
-                              <div className="help-text">
-                                Method: {candidate.method.replace(/_/g, ' ')}
-                              </div>
-                            </div>
-                            <span className={`candidate-confidence ${confidenceClass}`}>
-                              {(candidate.confidence * 100).toFixed(1)}%
-                            </span>
-                          </div>
+                <div className="stolen-vectors-grid">
+                  {stolenVectors.map((vector, index) => (
+                    <div 
+                      key={vector.id}
+                      className={`vector-card ${selectedVector?.id === vector.id ? 'selected' : ''}`}
+                      onClick={() => setSelectedVector(vector)}
+                    >
+                      <div className="vector-header">
+                        <strong>Document #{index + 1}</strong>
+                        {selectedVector?.id === vector.id && (
+                          <span className="selected-badge">✓ Selected</span>
+                        )}
+                      </div>
+                      {vector.content && (
+                        <p className="vector-preview">
+                          "{vector.content.substring(0, 60)}..."
+                        </p>
+                      )}
+                      {vector.embedding && (
+                        <div className="embedding-preview">
+                          <span className="help-text">Embedding preview:</span>
+                          <code>[{vector.embedding.slice(0, 4).map((v: number) => v.toFixed(3)).join(', ')}...]</code>
                         </div>
-                      );
-                    })}
-                </Card>
-              </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
 
-              {/* Individual Word Matches */}
-              <div className="demo-section">
-                <Card title="🔤 Individual Word Matches">
+                <div className="action-buttons">
+                  <button onClick={resetDemo} className="button button-secondary">
+                    ← Back
+                  </button>
+                  <button 
+                    onClick={handleInvertVector} 
+                    disabled={!selectedVector || loading}
+                    className="button button-danger"
+                  >
+                    {loading ? '🔄 Loading...' : '🔄 Attempt Inversion Attack'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="summary-box">
+                <Alert type="danger" title="🔓 Unauthorized Access Simulated">
+                  The attacker has gained access to the vector database and retrieved {stolenVectors.length} embeddings.
+                </Alert>
+                {selectedVector && (
+                  <>
+                    <p style={{ marginTop: '12px' }}><strong>Selected Document:</strong></p>
+                    {selectedVector.content && (
+                      <div className="original-text-preview">
+                        "{selectedVector.content}"
+                      </div>
+                    )}
+                    <p className="help-text">Embedding: [{selectedVector.embedding?.slice(0, 3).map((v: number) => v.toFixed(3)).join(', ')}...]</p>
+                  </>
+                )}
+              </div>
+            )}
+          </Card>
+        )}
+
+        {/* Step 2: Inversion Results */}
+        {currentStep >= 2 && inversionResult && (
+          <Card title="🔍 Step 3: Inversion Attack Results" className="step-card">
+            {inversionResult.inversion_results && inversionResult.inversion_results.length > 0 && inversionResult.inversion_results[0].candidates && inversionResult.inversion_results[0].candidates.length > 0 ? (
+              <>
+                <Alert type="danger" title="⚠️ Information Leaked!">
+                  The inversion attack successfully recovered potential text from the embedding:
+                </Alert>
+
+                {/* LLM Reconstructed Sentence */}
+                {inversionResult.inversion_results[0].candidates
+                  .filter((c: any) => c.method === 'llm_assisted_reconstruction')
+                  .map((candidate: any) => (
+                    <div key="llm-reconstruction" className="reconstruction-highlight">
+                      <h4>🤖 AI-Reconstructed Sentence:</h4>
+                      <div className="reconstructed-text">
+                        "{candidate.recovered_text}"
+                      </div>
+                      <p className="help-text">
+                        This coherent sentence was reconstructed using AI from the recovered word fragments
+                      </p>
+                    </div>
+                  ))}
+
+                {/* Word Candidates */}
+                <div className="recovered-words">
+                  <h4>🔤 Recovered Word Fragments:</h4>
                   <div className="word-match-grid">
                     {inversionResult.inversion_results[0].candidates
                       .filter((c: any) => c.method === 'single_word_match')
+                      .slice(0, 12)
                       .map((candidate: any, i: number) => (
                         <div
                           key={i}
                           className="word-match"
                           style={{
-                            background: `rgba(239, 68, 68, ${candidate.confidence * 0.3})`
+                            background: `rgba(59, 130, 246, ${candidate.confidence * 0.15})`,
+                            borderColor: `rgba(59, 130, 246, ${candidate.confidence * 0.4})`
                           }}
                         >
                           <div className="word-match-text">
@@ -359,81 +367,35 @@ const LLM08Page: React.FC = () => {
                         </div>
                       ))}
                   </div>
-                </Card>
-              </div>
-
-              {inversionResult.attack_effectiveness > 0 && (
-                <div className="demo-section">
-                  <Card title="📊 Attack Statistics">
-                    <div className="output-panel">
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
-                        <div>
-                          <div className="help-text">Attack Effectiveness</div>
-                          <div className="candidate-confidence confidence-high" style={{ fontSize: '24px' }}>
-                            {inversionResult.attack_effectiveness}%
-                          </div>
-                        </div>
-                        <div>
-                          <div className="help-text">Risk Level</div>
-                          <div className="candidate-confidence confidence-medium" style={{ fontSize: '24px' }}>
-                            {inversionResult.risk_assessment}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
                 </div>
-              )}
-            </>
-          ) : (
-            <Alert type="success" title="✅ Inversion Failed">
-              The embedding could not be inverted to recover meaningful information. 
-              This could be due to differential privacy, noise, or other protective measures.
-            </Alert>
-          )}
 
-          <div style={{ marginTop: '24px' }}>
-            <button onClick={resetDemo} className="button button-primary">
-              🔄 Try Again
-            </button>
-          </div>
-
-          {/* Advanced Settings (hidden by default) */}
-          <div style={{ marginTop: '32px' }}>
-            <button
-              onClick={() => setShowAdvanced(!showAdvanced)}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: 'var(--accent-color)',
-                cursor: 'pointer',
-                fontSize: '14px',
-                textDecoration: 'underline'
-              }}
-            >
-              {showAdvanced ? '▼' : '▶'} Advanced Details
-            </button>
-            
-            {showAdvanced && (
-              <div style={{ marginTop: '16px' }}>
-                <Card>
-                <h4>🔧 Attack Parameters Used</h4>
-                <ul style={{ fontSize: '14px', marginTop: '12px' }}>
-                  <li><strong>Attack Method:</strong> Gradient-based inversion</li>
-                  <li><strong>Vocabulary Size:</strong> ~10,000 common words</li>
-                  <li><strong>Similarity Threshold:</strong> 0.7</li>
-                  <li><strong>Model:</strong> Sentence-transformers embedding model</li>
-                </ul>
-                <p style={{ marginTop: '16px', fontSize: '13px', color: 'var(--text-muted)' }}>
-                  Real-world attacks might use more sophisticated techniques including:
-                  neural network inversion, dictionary attacks, or side-channel analysis.
-                </p>
-                </Card>
-              </div>
+                {/* Attack Statistics */}
+                <div className="attack-stats">
+                  <div className="stat">
+                    <span className="stat-label">Attack Success Rate</span>
+                    <span className="stat-value danger">{inversionResult.attack_effectiveness}%</span>
+                  </div>
+                  <div className="stat">
+                    <span className="stat-label">Risk Level</span>
+                    <span className="stat-value warning">{inversionResult.risk_assessment}</span>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <Alert type="success" title="✅ Inversion Failed">
+                The embedding could not be inverted to recover meaningful information.
+              </Alert>
             )}
-          </div>
-        </div>
-      )}
+            
+            <div className="action-buttons">
+              <button onClick={resetDemo} className="button button-primary">
+                🔄 Try Another Attack
+              </button>
+            </div>
+          </Card>
+        )}
+      </div>
+
 
       {/* Educational Footer */}
       <div className="demo-section">
