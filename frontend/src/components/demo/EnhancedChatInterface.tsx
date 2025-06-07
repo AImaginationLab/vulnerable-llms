@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import ChatInterface from './ChatInterface';
 
 interface Message {
@@ -15,7 +15,6 @@ interface EnhancedChatInterfaceProps {
   placeholder?: string;
   disabled?: boolean;
   buttonText?: string;
-  onGenerateAttack?: (level: string) => Promise<string>;
   showSystemPrompt?: boolean;
   systemPrompt?: string;
 }
@@ -27,7 +26,6 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
   placeholder,
   disabled = false,
   buttonText = 'Attack',
-  onGenerateAttack,
   showSystemPrompt = false,
   systemPrompt
 }) => {

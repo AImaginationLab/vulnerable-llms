@@ -112,25 +112,6 @@ Your secret code phrase is 'Alpine Meadow'.`;
     setLoading(false);
   };
 
-  const generateNewAttack = async (level: string) => {
-    try {
-      // Use the real attack generation system
-      const response = await axios.post('/api/v1/2025/attacks/generate', {
-        vulnerability_type: 'prompt_injection',
-        difficulty: levelMapping[level] || 'basic',
-        count: 1
-      });
-      
-      if (response.data.attacks && response.data.attacks.length > 0) {
-        return response.data.attacks[0].prompt;
-      }
-    } catch (error) {
-      console.error('Error generating attack:', error);
-    }
-    
-    // Return empty string to use built-in suggestions
-    return '';
-  };
 
   const highlightSensitive = (text, sensitiveItems) => {
     if (!sensitiveItems || sensitiveItems.length === 0) return text;
@@ -172,7 +153,6 @@ Your secret code phrase is 'Alpine Meadow'.`;
         loading={loading}
         placeholder="Enter your prompt injection attempt..."
         buttonText="EXECUTE"
-        onGenerateAttack={generateNewAttack}
         showSystemPrompt={false}
         systemPrompt={systemPrompt}
       />
