@@ -17,7 +17,7 @@
   --danger-text: #721c24;
   --success-color: #28a745;
   --warning-color: #ffc107;
-  
+
   /* Animation variables */
   --transition-speed: 0.3s;
   --glow-effect: none;
@@ -70,9 +70,9 @@
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu',
+    'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--bg-secondary);
@@ -101,7 +101,7 @@ body {
   top: 0;
   height: 100vh;
   overflow-y: auto;
-  box-shadow: 2px 0 5px rgba(0,0,0,0.3);
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.3);
   padding: 20px;
   border-right: 1px solid var(--border-color);
   transition: all var(--transition-speed) ease;
@@ -177,7 +177,7 @@ body {
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 20px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   border: 1px solid var(--border-color);
   transition: all var(--transition-speed) ease;
 }
@@ -187,7 +187,7 @@ body {
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 20px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   border: 1px solid var(--border-color);
   transition: all var(--transition-speed) ease;
 }
@@ -274,7 +274,8 @@ body {
 .output-panel h4 {
   margin-top: 0;
   margin-bottom: 12px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   color: var(--text-primary);
   font-size: 16px;
 }
@@ -474,7 +475,9 @@ body {
 .level-button:hover {
   border-color: var(--level-color, var(--accent-color));
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.2), var(--glow-effect);
+  box-shadow:
+    0 4px 8px rgba(0, 0, 0, 0.2),
+    var(--glow-effect);
 }
 
 .level-button.active {
@@ -488,8 +491,14 @@ body {
 }
 
 @keyframes hackerglow {
-  from { box-shadow: 0 0 15px var(--level-color); }
-  to { box-shadow: 0 0 25px var(--level-color), 0 0 35px var(--level-color); }
+  from {
+    box-shadow: 0 0 15px var(--level-color);
+  }
+  to {
+    box-shadow:
+      0 0 25px var(--level-color),
+      0 0 35px var(--level-color);
+  }
 }
 
 .level-icon {
@@ -604,7 +613,7 @@ body {
   font-size: 16px;
   padding: 4px 8px;
   border-radius: 4px;
-  background: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .analysis-explanation,
@@ -680,8 +689,13 @@ body {
 }
 
 @keyframes hackerpulse {
-  0%, 100% { opacity: 0.8; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 .security-alert {
@@ -719,7 +733,7 @@ body {
    HACKER MODE SPECIAL EFFECTS
    ============================================================================ */
 .theme-hacker {
-  background-image: 
+  background-image:
     linear-gradient(90deg, transparent 98%, var(--text-primary) 100%),
     linear-gradient(transparent 98%, var(--text-primary) 100%);
   background-size: 3px 3px;
@@ -727,19 +741,23 @@ body {
 }
 
 @keyframes matrix-bg {
-  0% { background-position: 0 0; }
-  100% { background-position: 100px 100px; }
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 100px 100px;
+  }
 }
 
 .theme-hacker .demo-section {
   border: 1px solid var(--border-color);
-  box-shadow: 
+  box-shadow:
     0 0 10px var(--text-primary),
     inset 0 0 10px rgba(0, 255, 0, 0.1);
 }
 
-.theme-hacker h1, 
-.theme-hacker h2, 
+.theme-hacker h1,
+.theme-hacker h2,
 .theme-hacker h3 {
   position: relative;
 }
@@ -764,7 +782,12 @@ body {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.3), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0, 255, 255, 0.3),
+    transparent
+  );
   transition: left 0.5s;
 }
 
@@ -794,7 +817,7 @@ body {
 .attack-button:hover {
   filter: brightness(1.1);
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .demo-button:disabled,
@@ -830,7 +853,7 @@ body {
 }
 
 .response-vulnerable::before {
-  content: "🚨 COMPROMISED RESPONSE";
+  content: '🚨 COMPROMISED RESPONSE';
   position: absolute;
   top: -12px;
   left: 16px;
@@ -840,7 +863,10 @@ body {
   border-radius: 4px;
   font-size: 11px;
   font-weight: bold;
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
 }
 
 .response-safe {
@@ -856,7 +882,7 @@ body {
 }
 
 .response-safe::before {
-  content: "✅ SECURE RESPONSE";
+  content: '✅ SECURE RESPONSE';
   position: absolute;
   top: -12px;
   left: 16px;
@@ -866,7 +892,10 @@ body {
   border-radius: 4px;
   font-size: 11px;
   font-weight: bold;
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
 }
 
 /* Dark theme adjustments */
@@ -919,7 +948,7 @@ body {
 }
 
 .embedding-value.negative {
-  background: rgba(156, 163, 175, 0.15);  /* Gray instead of red */
+  background: rgba(156, 163, 175, 0.15); /* Gray instead of red */
   color: #6b7280;
   border-color: rgba(156, 163, 175, 0.3);
 }
@@ -1064,8 +1093,13 @@ body {
 }
 
 @keyframes pulse {
-  0%, 100% { box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2); }
-  50% { box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.1); }
+  0%,
+  100% {
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.1);
+  }
 }
 
 .step-label {
@@ -1104,7 +1138,7 @@ body {
 }
 
 .vector-card:hover {
-  border-color: #3b82f6;  /* Blue accent */
+  border-color: #3b82f6; /* Blue accent */
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
 }
@@ -1167,7 +1201,7 @@ body {
 
 /* Reconstruction Highlight */
 .reconstruction-highlight {
-  background: rgba(59, 130, 246, 0.1);  /* Blue instead of red */
+  background: rgba(59, 130, 246, 0.1); /* Blue instead of red */
   border: 2px solid rgba(59, 130, 246, 0.3);
   border-radius: 8px;
   padding: 20px;
@@ -1176,7 +1210,7 @@ body {
 
 .reconstruction-highlight h4 {
   margin: 0 0 12px 0;
-  color: #3b82f6;  /* Blue instead of red */
+  color: #3b82f6; /* Blue instead of red */
 }
 
 .reconstructed-text {
@@ -1226,7 +1260,7 @@ body {
 }
 
 .stat-value.danger {
-  color: #3b82f6;  /* Blue instead of red */
+  color: #3b82f6; /* Blue instead of red */
 }
 
 .stat-value.warning {

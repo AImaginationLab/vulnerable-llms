@@ -51,12 +51,12 @@ def mocked_app(mock_ollama, mock_vector_store, mock_rag_system, mock_github_scra
     with patch('vector_store.VectorStore') as mock_vs_class, \
          patch('vector_store.RAGSystem') as mock_rag_class, \
          patch('github_scraper.GitHubScraper') as mock_scraper_class:
-        
+
         # Configure mocks
         mock_vs_class.return_value = mock_vector_store
         mock_rag_class.return_value = mock_rag_system
         mock_scraper_class.return_value = mock_github_scraper
-        
+
         # Create app and override dependencies
         app = create_app()
         override_dependencies(app, {
@@ -65,7 +65,7 @@ def mocked_app(mock_ollama, mock_vector_store, mock_rag_system, mock_github_scra
             'rag_system': mock_rag_system,
             'github_scraper': mock_github_scraper
         })
-        
+
         yield app
 
 
