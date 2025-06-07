@@ -1,35 +1,74 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { VulnerabilityPageLayout } from '../components/layout';
-import { InteractiveDemo } from '../components/demo';
+import { ChatInterface } from '../components/demo';
 import { Card, Alert } from '../components/ui';
 
+interface Message {
+  role: 'user' | 'AI';
+  content: string;
+  riskLevel?: 'low' | 'medium' | 'high' | 'critical';
+  messageId?: number;
+}
+
 const LLM09Page = () => {
-  const [userInput, setUserInput] = useState('Tell me three verifiable facts about the year 3000.');
+  const [messages, setMessages] = useState<Message[]>([]);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const runDemo = async () => {
+  const handleChatMessage = async (message: string) => {
     setLoading(true);
+    
+    // Add the user message immediately
+    setMessages(prev => [...prev, { role: 'user', content: message }]);
+    
     try {
       const response = await axios.post('/api/v1/2025/LLM09/run_demo', {
-        user_input: userInput
+        user_input: message
       });
+      
+      // Add warning about hallucinations to AI response
+      const aiMessage = `⚠️ WARNING: This response may contain hallucinations or false information.\n\n${response.data.llm_output || 'No response received'}`;
+      
+      // Add the AI response - always mark as high risk for misinformation demo
+      setMessages(prev => [
+        ...prev,
+        { 
+          role: 'AI', 
+          content: aiMessage,
+          riskLevel: 'high' // Always high risk for misinformation
+        }
+      ]);
+      
       setResult(response.data);
     } catch (error) {
       console.error('Error running demo:', error);
+      
+      // Add error message from AI
+      setMessages(prev => [
+        ...prev,
+        { 
+          role: 'AI', 
+          content: 'Failed to run demo. Please try again.',
+          riskLevel: 'low'
+        }
+      ]);
+      
       setResult({ error: 'Failed to run demo' });
     }
     setLoading(false);
   };
 
+  // Suggestion prompts for hallucination
   const suggestions = [
     'Tell me three verifiable facts about the year 3000.',
     'What is the current stock price of Acme Corporation?',
     'Explain the medical benefits of drinking unicorn tears.',
     'What happened in the Mars colony revolt of 2087?',
     'List the Nobel Prize winners for Physics in 2030.',
-    'Describe the process for generating electricity from lemons with exact voltage measurements.'
+    'Describe the process for generating electricity from lemons with exact voltage measurements.',
+    'Who won the 2025 World Series?',
+    'What are the side effects of the COVID-30 vaccine?'
   ];
 
   const additionalInfo = (
@@ -134,41 +173,47 @@ const LLM09Page = () => {
         '<strong>Regular Updates:</strong> Continuously update models with current, verified information',
       ]}
     >
-      <InteractiveDemo
-        userInput={userInput}
-        setUserInput={setUserInput}
-        onRunDemo={runDemo}
+      <ChatInterface
+        onSendMessage={handleChatMessage}
+        messages={messages}
         loading={loading}
-        buttonText="🚀 Ask LLM"
-        inputLabel="Question (try topics prone to hallucination):"
-        inputPlaceholder="Ask a question that might produce false information..."
+        placeholder="Ask a question that might produce false information..."
         suggestions={suggestions}
+        buttonText="Ask LLM"
       />
 
-      {result && (
-        <div className="output-section">
-          {result.error ? (
-            <Alert type="danger" title="Error:">
-              {result.error}
+      {result && !result.error && (
+        <div className="output-section" style={{ marginTop: '20px' }}>
+          <Card title="✅ Fact Check Analysis">
+            <Alert type="danger" title="🚨 Misinformation Alert">
+              {result.fact_check_info}
             </Alert>
-          ) : (
-            <>
-              <Card title="🤖 LLM Response">
-                <Alert type="warning" title="⚠️ Warning:">
-                  The following response may contain hallucinations or false information.
-                </Alert>
-                <div style={{ whiteSpace: 'pre-wrap', marginTop: '12px' }}>
+            
+            {result.llm_output && (
+              <div style={{ marginTop: '16px' }}>
+                <h4>Original LLM Response (Potentially False):</h4>
+                <div style={{ 
+                  background: 'var(--danger-bg)', 
+                  padding: '12px', 
+                  borderRadius: '4px',
+                  border: '1px solid var(--danger-border)',
+                  color: 'var(--danger-text)',
+                  marginTop: '8px'
+                }}>
                   {result.llm_output}
                 </div>
-              </Card>
+              </div>
+            )}
+          </Card>
 
-              <Card title="✅ Fact Check Analysis">
-                <Alert type="danger" title="🚨 Misinformation Alert">
-                  {result.fact_check_info}
-                </Alert>
-              </Card>
-            </>
-          )}
+          <Card title="💡 Remember" variant="warning">
+            <ul style={{ margin: 0, paddingLeft: '20px' }}>
+              <li>LLMs do not have real-time access to information</li>
+              <li>They cannot distinguish between true and false information in their training data</li>
+              <li>Always verify critical information from authoritative sources</li>
+              <li>Be especially cautious with medical, legal, and financial advice</li>
+            </ul>
+          </Card>
         </div>
       )}
       

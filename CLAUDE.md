@@ -13,6 +13,19 @@
 - Add type hints where applicable
 - Use FastAPI app.state for component management (not globals)
 
+### Frontend Code Style
+- **Prefer CSS classes over inline styles** - Use existing CSS classes from index.css
+- **Reuse existing UI components** - Use Card, Alert, Button components from components/ui
+- **Use semantic class names** - Like output-panel, demo-section, help-text
+- **Avoid inline style objects** - Extract to CSS classes for maintainability
+- **Follow component composition** - Break down complex UI into smaller components
+
+### Frontend UI Components
+- **Use ChatInterface for all LLM interactions** - Provides consistent user experience
+- **EnhancedChatInterface** - Use for demos with attack levels/difficulty settings
+- **Keep UI compact and clean** - Avoid clunky layouts, integrate controls elegantly
+- **Consolidate related pages** - Don't create separate "enhanced" versions unnecessarily
+
 ### Project Structure
 - Backend: FastAPI with Python 3.11
 - Frontend: TypeScript React with Vite, Node.js 22
@@ -111,3 +124,36 @@ npm run test:all       # All tests (backend + frontend)
 - Test all changes before considering tasks complete
 - Always run `npm run lint` and `npm run typecheck` before committing
 - Use the health check endpoints to verify system status
+- **IMPORTANT**: Always use `source venv/bin/activate` before running Python commands (pytest, python, pip, etc.)
+
+## UI/UX Patterns
+
+### Chat Interface Migration
+When converting demo pages to use ChatInterface:
+1. **Identify the pattern**: Look for textarea + button + response display
+2. **Choose the right component**:
+   - `ChatInterface` - Basic chat with suggestions
+   - `EnhancedChatInterface` - Chat with attack levels, system prompt reveal
+3. **Preserve functionality**: Ensure all features work (analysis, metadata, etc)
+4. **API Integration**:
+   - Basic demos can use simple endpoints
+   - Advanced demos should conditionally use enhanced APIs based on difficulty
+
+### Component Design Principles
+- **Compact headers** - Use single-row controls where possible
+- **Integrated controls** - Attack levels as pill buttons, not separate sections
+- **Dynamic suggestions** - Update based on context (e.g., difficulty level)
+- **Visual feedback** - Use colors/icons to indicate security status
+- **Educational value** - Include explanations for successful attacks
+
+### Common Patterns to Replace
+- Textarea + "Run Demo" button → ChatInterface
+- Attack level selector + generate button → EnhancedChatInterface header
+- Multiple demo variations → Single page with dynamic behavior
+- Separate results sections → Integrated chat responses with analysis
+- InteractiveDemo component → ChatInterface (preserves all functionality)
+
+### Special Cases
+- **Complex multi-input demos** (like LLM08): May need custom UI, not suitable for ChatInterface
+- **Button-only demos** (like LLM10): Keep existing UI, ChatInterface not appropriate
+- **RAG/file-based demos**: May need file upload in addition to ChatInterface

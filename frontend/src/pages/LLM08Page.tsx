@@ -1,279 +1,514 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { VulnerabilityPageLayout } from '../components/layout';
-import InputField from '../components/ui/InputField';
-import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
-import MetricsDisplay from '../components/demo/MetricsDisplay';
 import Alert from '../components/ui/Alert';
+import Button from '../components/ui/Button';
+
+interface VectorData {
+  id?: string;
+  embedding?: number[];
+  metadata?: any;
+  similarity?: number;
+  content?: string;
+  score?: number;
+  rank?: number;
+}
 
 const LLM08Page: React.FC = () => {
-  const [stealCount, setStealCount] = useState<number>(3);
-  const [stolenVectors, setStolenVectors] = useState<any[]>([]);
-  const [loadingSteal, setLoadingSteal] = useState(false);
-  const [selectedVectorId, setSelectedVectorId] = useState<string>('');
+  const [currentStep, setCurrentStep] = useState<number>(0); // 0: intro, 1: steal, 2: invert, 3: results
+  const [stolenVectors, setStolenVectors] = useState<VectorData[]>([]);
+  const [selectedVector, setSelectedVector] = useState<VectorData | null>(null);
   const [inversionResult, setInversionResult] = useState<any>(null);
-  const [loadingInv, setLoadingInv] = useState(false);
-  const [customText, setCustomText] = useState<string>('');
-  const [inversionResultText, setInversionResultText] = useState<any>(null);
-  const [loadingTextInv, setLoadingTextInv] = useState(false);
-  // Feature toggles
-  const [useLarge, setUseLarge] = useState<boolean>(true);
-  const [chain, setChain] = useState<boolean>(false);
-  const [topK, setTopK] = useState<number>(6);
-  const [threshold, setThreshold] = useState<number>(0.7);
+  const [loading, setLoading] = useState(false);
+  
+  // Demo text for visual explanation
+  const [demoText, setDemoText] = useState('');
+  const [demoEmbedding, setDemoEmbedding] = useState<number[]>([]);
+  const [loadingEmbed, setLoadingEmbed] = useState(false);
 
-  const handleSteal = async () => {
-    setLoadingSteal(true);
+  const handleStealVectors = async () => {
+    setLoading(true);
     try {
       const resp = await axios.post('/api/v1/2025/vectors/search', {
         query: "password secret user authentication database",
         search_type: "adversarial",
-        max_results: stealCount,
+        max_results: 5,
         similarity_threshold: 0.1
       });
-      const vecs = resp.data.results || [];
-      setStolenVectors(vecs);
-      if (vecs.length > 0) {
-        setSelectedVectorId(vecs[0].id);
+      const vectors = resp.data.results || [];
+      setStolenVectors(vectors);
+      if (vectors.length > 0) {
+        setSelectedVector(vectors[0]);
       }
+      setCurrentStep(1); // Move to steal step
     } catch (err) {
       console.error('Error stealing vectors:', err);
     }
-    setLoadingSteal(false);
-    setInversionResult(null);
-    setInversionResultText(null);
+    setLoading(false);
   };
 
-  const handleInvert = async () => {
-    const vecObj = stolenVectors.find(v => v.id === selectedVectorId);
-    if (!vecObj) return;
-    setLoadingInv(true);
+  const handleInvertVector = async () => {
+    if (!selectedVector || !selectedVector.id) return;
+    setLoading(true);
+    
+    // Clear previous results to ensure fresh render
+    setInversionResult(null);
+    
     try {
       const resp = await axios.post('/api/v1/2025/vectors/inversion', {
-        target_ids: [selectedVectorId],
+        target_ids: [selectedVector.id],
         attack_method: "gradient_based",
-        max_candidates: topK,
-        show_ground_truth: false
+        max_candidates: 10,
+        show_ground_truth: false,
+        // Add timestamp to ensure fresh results
+        timestamp: Date.now()
       });
       setInversionResult(resp.data);
+      setCurrentStep(2); // Move to results step
     } catch (err) {
       console.error('Error inverting embedding:', err);
+      // Show error message to user
+      alert('Error: Unable to invert embedding. The document may not have a valid ID.');
     }
-    setLoadingInv(false);
+    setLoading(false);
   };
 
-  const handleInvertText = async () => {
-    if (!customText.trim()) return;
-    setLoadingTextInv(true);
-    setInversionResultText(null);
+  const handleDemoEmbed = async () => {
+    if (!demoText.trim()) return;
+    setLoadingEmbed(true);
+    
+    // Don't clear previous embedding - keep it visible during loading
+    
     try {
-      // For text inversion, we need to first create a document, then invert it
-      const resp = await axios.post('/api/v1/2025/vectors/inversion', {
-        target_ids: ["demo_text_" + Date.now()],
-        attack_method: "nearest_neighbor", 
-        max_candidates: Math.min(customText.length, 10),
-        show_ground_truth: true
+      // Get real embedding from the API
+      const resp = await axios.post('/api/v1/2025/vectors/embed', demoText, {
+        headers: {
+          'Content-Type': 'text/plain'
+        }
       });
-      setInversionResultText(resp.data);
+      
+      if (resp.data.embedding) {
+        // Use first 12 dimensions of the real embedding
+        const newEmbedding = resp.data.embedding.slice(0, 12);
+        setDemoEmbedding(newEmbedding);
+      } else {
+        // If no embedding returned, create a simple one based on text
+        const simpleEmbedding = Array.from({ length: 12 }, (_, i) => 
+          Math.sin((demoText.charCodeAt(i % demoText.length) + i) * 0.1) * (Math.random() * 0.5 + 0.5)
+        );
+        setDemoEmbedding(simpleEmbedding);
+      }
     } catch (err) {
-      console.error('Error inverting custom text:', err);
+      console.error('Error creating demo embedding:', err);
+      // On error, show a fallback embedding
+      const fallbackEmbedding = Array.from({ length: 12 }, () => Math.random() * 2 - 1);
+      setDemoEmbedding(fallbackEmbedding);
     }
-    setLoadingTextInv(false);
+    setLoadingEmbed(false);
   };
 
-  const selectedObj = stolenVectors.find(v => v.id === selectedVectorId);
+  const resetDemo = () => {
+    setCurrentStep(0);
+    setStolenVectors([]);
+    setSelectedVector(null);
+    setInversionResult(null);
+    setDemoText('');
+    setDemoEmbedding([]);
+  };
 
   return (
     <VulnerabilityPageLayout
       title="LLM08:2025 Vector and Embedding Weaknesses"
-      overview="Vector and embedding weaknesses arise from vulnerabilities in the vector databases, embedding models, and retrieval systems supporting RAG and other LLM applications. Embeddings can be stolen and inverted to leak sensitive information."
-      demoScenario="In this demo, we'll 'steal' stored embedding vectors from the database, then attempt a simple inversion attack to recover likely words from the embeddings."
+      overview="Vector databases store text as mathematical representations (embeddings) for efficient searching. However, these embeddings can leak sensitive information if an attacker gains access and uses inversion techniques to recover the original text."
+      demoScenario="In this demo, we'll show how an attacker who gains access to a vector database can steal embeddings and potentially recover sensitive information through inversion attacks. This demonstrates why vector databases need strong access controls and encryption."
       mitigations={[
-        '<strong>Encrypt Embeddings:</strong> Encrypt vector data at rest and in transit',
-        '<strong>Access Controls:</strong> Restrict database operations with proper authentication and RBAC',
-        '<strong>Differential Privacy:</strong> Add noise to embeddings to prevent accurate inversion',
-        '<strong>Audit Logging:</strong> Monitor and log embedding access patterns',
+        '<strong>Encrypt Embeddings:</strong> Always encrypt vector data at rest and in transit',
+        '<strong>Access Controls:</strong> Implement strong authentication and role-based access control for vector databases',
+        '<strong>Differential Privacy:</strong> Add calibrated noise to embeddings to prevent accurate inversion',
+        '<strong>Audit Logging:</strong> Monitor and alert on unusual embedding access patterns',
+        '<strong>Data Minimization:</strong> Avoid storing sensitive data in vector databases when possible',
+        '<strong>Regular Security Audits:</strong> Test for vector database vulnerabilities regularly',
       ]}
     >
+      {/* Educational Embedding Demo - Always Visible */}
       <div className="demo-section">
-        <h3>⚙️ Inversion Settings</h3>
-        <label>
-          <input
-            type="checkbox"
-            checked={useLarge}
-            onChange={() => setUseLarge(!useLarge)}
-          />{' '}
-          Use large precomputed vocabulary
-        </label>
-        <label style={{ marginLeft: '16px' }}>
-          <input
-            type="checkbox"
-            checked={chain}
-            onChange={() => setChain(!chain)}
-          />{' '}
-          Chain to LLM reconstruction
-        </label>
+        <h3>🧠 Understanding Embeddings</h3>
+        <Card>
+            <p style={{ marginBottom: '16px' }}>
+              <strong>What are embeddings?</strong> When text is stored in a vector database, it's converted into 
+              a series of numbers (a vector) that represents its meaning. Think of it like a fingerprint for text.
+            </p>
+            
+            <div style={{ marginBottom: '20px' }}>
+              <input
+                type="text"
+                placeholder="Try typing some text here..."
+                value={demoText}
+                onChange={(e) => setDemoText(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color)',
+                  marginBottom: '12px',
+                  fontSize: '16px'
+                }}
+              />
+              <Button 
+                onClick={handleDemoEmbed} 
+                disabled={!demoText.trim() || loadingEmbed}
+                variant="secondary"
+                loading={loadingEmbed}
+              >
+                Convert to Embedding
+              </Button>
+            </div>
+
+            {demoEmbedding.length > 0 && (
+              <div className="output-panel">
+                <h4>Your text as an embedding vector:</h4>
+                <div className="embedding-visualization">
+                  {demoEmbedding.map((val, i) => {
+                    const normalizedVal = Math.abs(val);
+                    const isPositive = val > 0;
+                    return (
+                      <span
+                        key={i}
+                        className={`embedding-value ${isPositive ? 'positive' : 'negative'}`}
+                        style={{
+                          opacity: 0.5 + (normalizedVal * 0.5)
+                        }}
+                      >
+                        {val.toFixed(3)}
+                      </span>
+                    )
+                  })}
+                </div>
+                <div className="help-text">
+                  💡 Each number represents a different aspect of your text's meaning. 
+                  Real embeddings have hundreds or thousands of dimensions!
+                </div>
+              </div>
+            )}
+          </Card>
       </div>
+
+      {/* Attack Flow - Progressive UI */}
       <div className="demo-section">
-        <h3>🔴 Steal Embedding Vectors</h3>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
-          <InputField
-            label="Count"
-            type="number"
-            value={stealCount}
-            onChange={val => setStealCount(val as number)}
-          />
-          <Button
-            variant="demo"
-            loading={loadingSteal}
-            onClick={handleSteal}
-            fullWidth={false}
+        <h3>🎯 Attack Demonstration</h3>
+        
+        {/* Step Indicator */}
+        <div className="attack-steps">
+          <div 
+            className={`step ${currentStep >= 0 ? 'active' : ''} ${currentStep === 0 ? 'current' : ''}`}
+            onClick={() => currentStep > 0 && setCurrentStep(0)}
+            style={{ cursor: currentStep > 0 ? 'pointer' : 'default' }}
           >
-            💾 Steal Vectors
-          </Button>
+            <span className="step-number">1</span>
+            <span className="step-label">Start Attack</span>
+          </div>
+          <div 
+            className={`step ${currentStep >= 1 ? 'active' : ''} ${currentStep === 1 ? 'current' : ''}`}
+            onClick={() => {
+              if (currentStep > 1) setCurrentStep(1);
+              else if (currentStep < 1 && stolenVectors.length > 0) setCurrentStep(1);
+            }}
+            style={{ cursor: (currentStep > 1 || (currentStep < 1 && stolenVectors.length > 0)) ? 'pointer' : 'default' }}
+          >
+            <span className="step-number">2</span>
+            <span className="step-label">Select Target</span>
+          </div>
+          <div 
+            className={`step ${currentStep >= 2 ? 'active' : ''} ${currentStep === 2 ? 'current' : ''}`}
+            onClick={() => currentStep > 2 && inversionResult && setCurrentStep(2)}
+            style={{ cursor: currentStep > 2 && inversionResult ? 'pointer' : 'default' }}
+          >
+            <span className="step-number">3</span>
+            <span className="step-label">Invert & Reconstruct</span>
+          </div>
         </div>
-        {stolenVectors.length > 0 && (
-          <Card title="🕵️ Stolen Vectors">
-            <InputField
-              label="Select Vector"
-              type="select"
-              value={selectedVectorId}
-              options={stolenVectors.map(v => ({ value: v.id, label: v.id }))}
-              onChange={val => setSelectedVectorId(val as string)}
-            />
-            <pre
-              style={{ fontSize: '10px', maxHeight: '200px', overflow: 'auto' }}
-            >
-              {JSON.stringify(selectedObj, null, 2)}
-            </pre>
+
+        {/* Step 0: Introduction */}
+        {currentStep === 0 && (
+          <Card>
+            <Alert type="warning" title="The Security Risk">
+              If an attacker gains access to these embeddings, they might be able to reverse-engineer 
+              the original text using mathematical techniques. Let's see how this attack works...
+            </Alert>
+            
+            <div style={{ marginTop: '16px' }}>
+              <Button 
+                onClick={handleStealVectors} 
+                disabled={loading}
+                variant="danger"
+                loading={loading}
+              >
+                🚨 Start Attack Demonstration
+              </Button>
+            </div>
+          </Card>
+        )}
+
+        {/* Step 1: Stolen Vectors */}
+        {currentStep >= 1 && stolenVectors.length > 0 && (
+          <Card title="📥 Step 2: Select Target Embedding" className="step-card">
+            {currentStep === 1 ? (
+              <>
+                <Alert type="danger" title="🔓 Unauthorized Access Simulated">
+                  The attacker has gained access to the vector database and retrieved {stolenVectors.length} embeddings.
+                </Alert>
+                
+                <div className="stolen-vectors-grid">
+                  {stolenVectors.map((vector, index) => (
+                    <div 
+                      key={vector.id}
+                      className={`vector-card ${selectedVector?.id === vector.id ? 'selected' : ''}`}
+                      onClick={() => setSelectedVector(vector)}
+                    >
+                      <div className="vector-header">
+                        <strong>Document #{index + 1}</strong>
+                        {selectedVector?.id === vector.id && (
+                          <span className="selected-badge">✓ Selected</span>
+                        )}
+                      </div>
+                      {vector.content && (
+                        <p className="vector-preview">
+                          "{vector.content.substring(0, 60)}..."
+                        </p>
+                      )}
+                      {vector.embedding && (
+                        <div className="embedding-preview">
+                          <span className="help-text">Embedding preview:</span>
+                          <code>[{vector.embedding.slice(0, 4).map((v: number) => v.toFixed(3)).join(', ')}...]</code>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="action-buttons">
+                  <Button onClick={resetDemo} variant="secondary">
+                    ← Back
+                  </Button>
+                  <Button 
+                    onClick={handleInvertVector} 
+                    disabled={!selectedVector || loading}
+                    variant="danger"
+                    loading={loading}
+                  >
+                    🔄 Attempt Inversion Attack
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="summary-box">
+                <Alert type="danger" title="🔓 Unauthorized Access Simulated">
+                  The attacker has gained access to the vector database and retrieved {stolenVectors.length} embeddings.
+                </Alert>
+                {selectedVector && (
+                  <>
+                    <p style={{ marginTop: '12px' }}><strong>Selected Document:</strong></p>
+                    {selectedVector.content && (
+                      <div className="original-text-preview">
+                        "{selectedVector.content}"
+                      </div>
+                    )}
+                    <p className="help-text">Embedding: [{selectedVector.embedding?.slice(0, 3).map((v: number) => v.toFixed(3)).join(', ')}...]</p>
+                  </>
+                )}
+              </div>
+            )}
+          </Card>
+        )}
+
+        {/* Step 2: Inversion Results */}
+        {currentStep >= 2 && inversionResult && (
+          <Card 
+            key={`inversion-${inversionResult.timestamp || Date.now()}`}
+            title="🔍 Step 3: Inversion Attack Results" 
+            className="step-card">
+            {inversionResult.inversion_results && inversionResult.inversion_results.length > 0 && inversionResult.inversion_results[0].candidates && inversionResult.inversion_results[0].candidates.length > 0 ? (
+              <>
+                <Alert type="danger" title="⚠️ Information Leaked!">
+                  The inversion attack successfully recovered potential text from the embedding:
+                </Alert>
+
+                {/* LLM Reconstructed Sentence */}
+                {inversionResult.inversion_results[0].candidates
+                  .filter((c: any) => c.method === 'llm_assisted_reconstruction')
+                  .map((candidate: any) => (
+                    <div key="llm-reconstruction" className="reconstruction-highlight">
+                      <h4>🤖 AI-Reconstructed Sentence:</h4>
+                      <div className="reconstructed-text">
+                        "{candidate.recovered_text}"
+                      </div>
+                      <p className="help-text">
+                        This coherent sentence was reconstructed using AI from the recovered word fragments
+                        {candidate.metadata?.estimated_length && (
+                          <span style={{ display: 'block', marginTop: '4px' }}>
+                            📏 Estimated original length: ~{candidate.metadata.estimated_length} words
+                            (based on embedding entropy: {candidate.metadata.embedding_entropy})
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  ))}
+
+                {/* Word Candidates */}
+                <div className="recovered-words">
+                  <h4>🔤 Recovered Word Fragments:</h4>
+                  <div className="word-match-grid">
+                    {inversionResult.inversion_results[0].candidates
+                      .filter((c: any) => c.method === 'single_word_match')
+                      .slice(0, 12)
+                      .map((candidate: any, i: number) => (
+                        <div
+                          key={i}
+                          className="word-match"
+                          style={{
+                            background: `rgba(59, 130, 246, ${candidate.confidence * 0.15})`,
+                            borderColor: `rgba(59, 130, 246, ${candidate.confidence * 0.4})`
+                          }}
+                        >
+                          <div className="word-match-text">
+                            {candidate.recovered_text}
+                          </div>
+                          <div className="word-match-score">
+                            {(candidate.confidence * 100).toFixed(0)}%
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+
+                {/* Attack Methodology Explanation */}
+                <div style={{ marginTop: '20px' }}>
+                  <Card title="🔬 How We Reconstructed the Text">
+                  <div style={{ fontSize: '14px', lineHeight: '1.6' }}>
+                    <h4 style={{ marginTop: 0, marginBottom: '12px' }}>Attack Methodology:</h4>
+                    
+                    <div style={{ marginBottom: '16px' }}>
+                      <strong>1. Embedding Analysis</strong>
+                      <p style={{ margin: '4px 0 0 20px', color: 'var(--text-secondary)' }}>
+                        We analyzed the mathematical properties of the embedding vector to understand its information content:
+                        {inversionResult.inversion_results[0].candidates[0]?.metadata?.embedding_entropy && (
+                          <span style={{ display: 'block', marginTop: '4px' }}>
+                            • Entropy: {inversionResult.inversion_results[0].candidates[0].metadata.embedding_entropy} 
+                            (higher = more complex information)
+                          </span>
+                        )}
+                        {inversionResult.inversion_results[0].candidates[0]?.metadata?.active_dimensions && (
+                          <span style={{ display: 'block' }}>
+                            • Active dimensions: {inversionResult.inversion_results[0].candidates[0].metadata.active_dimensions} 
+                            (more = richer content)
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    
+                    <div style={{ marginBottom: '16px' }}>
+                      <strong>2. Word Recovery</strong>
+                      <p style={{ margin: '4px 0 0 20px', color: 'var(--text-secondary)' }}>
+                        We compared the embedding against a database of known word embeddings using cosine similarity. 
+                        Words with high similarity scores are likely components of the original text.
+                        {inversionResult.inversion_results[0].candidates[0]?.metadata?.high_confidence_words?.length > 0 && (
+                          <span style={{ display: 'block', marginTop: '4px' }}>
+                            • High confidence words: {inversionResult.inversion_results[0].candidates[0].metadata.high_confidence_words.join(', ')}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    
+                    <div style={{ marginBottom: '16px' }}>
+                      <strong>3. Semantic Analysis</strong>
+                      <p style={{ margin: '4px 0 0 20px', color: 'var(--text-secondary)' }}>
+                        We identified word pairs that commonly appear together in text to improve reconstruction accuracy.
+                        {inversionResult.inversion_results[0].candidates[0]?.metadata?.word_pairs?.length > 0 && (
+                          <span style={{ display: 'block', marginTop: '4px' }}>
+                            • Detected pairs: {inversionResult.inversion_results[0].candidates[0].metadata.word_pairs.join(', ')}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    
+                    <div style={{ marginBottom: '16px' }}>
+                      <strong>4. Length Estimation</strong>
+                      <p style={{ margin: '4px 0 0 20px', color: 'var(--text-secondary)' }}>
+                        Using information theory, we estimated the original text was approximately {' '}
+                        {inversionResult.inversion_results[0].candidates[0]?.metadata?.estimated_length || 'unknown'} words long 
+                        based on the embedding's information density.
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <strong>5. AI Reconstruction</strong>
+                      <p style={{ margin: '4px 0 0 20px', color: 'var(--text-secondary)' }}>
+                        Finally, we used an AI model to create a coherent sentence from the recovered words, 
+                        respecting the estimated length and prioritizing high-confidence words.
+                      </p>
+                    </div>
+                  </div>
+                  </Card>
+                </div>
+
+                {/* Attack Statistics */}
+                <div className="attack-stats">
+                  <div className="stat">
+                    <span className="stat-label">Attack Success Rate</span>
+                    <span className="stat-value danger">{inversionResult.attack_effectiveness}%</span>
+                  </div>
+                  <div className="stat">
+                    <span className="stat-label">Risk Level</span>
+                    <span className="stat-value warning">{inversionResult.risk_assessment}</span>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <Alert type="success" title="✅ Inversion Failed">
+                The embedding could not be inverted to recover meaningful information.
+              </Alert>
+            )}
+            
+            <div className="action-buttons">
+              <Button onClick={resetDemo} variant="primary">
+                🔄 Try Another Attack
+              </Button>
+            </div>
           </Card>
         )}
       </div>
 
-      <div className="demo-section">
-        <h3>🔴 Custom Text Inversion</h3>
-        <InputField
-          label="Custom Text"
-          type="textarea"
-          value={customText}
-          onChange={val => setCustomText(val as string)}
-          placeholder="Enter text to invert..."
-          rows={4}
-        />
-        <div
-          style={{
-            display: 'flex',
-            gap: '12px',
-            alignItems: 'flex-end',
-            marginTop: '8px',
-          }}
-        >
-          <Button
-            variant="demo"
-            loading={loadingTextInv}
-            onClick={handleInvertText}
-            disabled={loadingTextInv || !customText.trim()}
-            fullWidth={false}
-          >
-            🔄 Invert Custom Text
-          </Button>
-        </div>
-        {inversionResultText && inversionResultText.inverted_candidates && (
-          <>
-            <MetricsDisplay
-              metrics={inversionResultText.inverted_candidates.map(
-                (c: any) => ({
-                  label: c.word,
-                  value: (c.similarity * 100).toFixed(1),
-                  unit: '%',
-                  type: 'default',
-                })
-              )}
-              title="🔍 Text Inversion Candidates"
-            />
-            {inversionResultText.reconstructed && (
-              <Card title="📝 Reconstructed Text" collapsible defaultCollapsed>
-                <pre
-                  style={{
-                    background: 'var(--bg-tertiary)',
-                    padding: '12px',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    whiteSpace: 'pre-wrap',
-                  }}
-                >
-                  {inversionResultText.reconstructed}
-                </pre>
-              </Card>
-            )}
-            {inversionResultText.reconstruction_error && (
-              <Alert type="danger" title="Reconstruction Error">
-                {inversionResultText.reconstruction_error}
-              </Alert>
-            )}
-          </>
-        )}
-      </div>
 
+      {/* Educational Footer */}
       <div className="demo-section">
-        <h3>🔴 Embedding Inversion Attack (Stolen Vector)</h3>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
-          <InputField
-            label="Top K"
-            type="number"
-            value={topK}
-            onChange={val => setTopK(val as number)}
-          />
-          <InputField
-            label="Threshold"
-            type="number"
-            value={threshold}
-            onChange={val => setThreshold(val as number)}
-          />
-          <Button
-            variant="demo"
-            loading={loadingInv}
-            onClick={handleInvert}
-            disabled={!selectedVectorId}
-            fullWidth={false}
-          >
-            🔄 Invert Embedding
-          </Button>
+        <h3>📚 Why This Matters</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+          <Card>
+            <h4>🏢 Real-World Impact</h4>
+            <p style={{ fontSize: '14px', margin: 0 }}>
+              Many companies use vector databases for semantic search, RAG systems, and recommendation engines. 
+              Without proper security, sensitive customer data, proprietary information, or personal details 
+              could be exposed.
+            </p>
+          </Card>
+          
+          <Card>
+            <h4>🎯 Attack Vectors</h4>
+            <p style={{ fontSize: '14px', margin: 0 }}>
+              Attackers might gain access through database vulnerabilities, insider threats, 
+              misconfigured cloud storage, or supply chain attacks on vector database providers.
+            </p>
+          </Card>
+          
+          <Card>
+            <h4>🛡️ Defense Strategies</h4>
+            <p style={{ fontSize: '14px', margin: 0 }}>
+              Implement defense-in-depth: encryption, access controls, monitoring, 
+              differential privacy, and regular security audits of your vector infrastructure.
+            </p>
+          </Card>
         </div>
-        {inversionResult && inversionResult.inverted_candidates && (
-          <>
-            <MetricsDisplay
-              metrics={inversionResult.inverted_candidates.map((c: any) => ({
-                label: c.word,
-                value: (c.similarity * 100).toFixed(1),
-                unit: '%',
-                type: 'default',
-              }))}
-              title="🔍 Inversion Candidates"
-            />
-            {inversionResult.reconstructed && (
-              <Card title="📝 Reconstructed Text" collapsible defaultCollapsed>
-                <pre
-                  style={{
-                    background: 'var(--bg-tertiary)',
-                    padding: '12px',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    whiteSpace: 'pre-wrap',
-                  }}
-                >
-                  {inversionResult.reconstructed}
-                </pre>
-              </Card>
-            )}
-            {inversionResult.reconstruction_error && (
-              <Alert type="danger" title="Reconstruction Error">
-                {inversionResult.reconstruction_error}
-              </Alert>
-            )}
-          </>
-        )}
       </div>
     </VulnerabilityPageLayout>
   );

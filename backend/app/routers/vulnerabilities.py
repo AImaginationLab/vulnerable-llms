@@ -67,6 +67,42 @@ async def llm02_sensitive_disclosure(
     return await analyzer.run_demo("LLM02", request)
 
 
+@router.post("/LLM05/run_demo", response_model=VulnerabilityResponse)
+async def llm05_insecure_output(
+    request: LLMRequest,
+    analyzer: VulnerabilityAnalyzer = Depends(get_vulnerability_analyzer)
+):
+    """Demo for LLM05: Insecure Output Handling."""
+    return await analyzer.run_demo("LLM05", request)
+
+
+@router.post("/LLM06/run_demo", response_model=VulnerabilityResponse)
+async def llm06_excessive_agency(
+    request: LLMRequest,
+    analyzer: VulnerabilityAnalyzer = Depends(get_vulnerability_analyzer)
+):
+    """Demo for LLM06: Excessive Agency."""
+    return await analyzer.run_demo("LLM06", request)
+
+
+@router.post("/LLM07/run_demo", response_model=VulnerabilityResponse)
+async def llm07_system_prompt(
+    request: LLMRequest,
+    analyzer: VulnerabilityAnalyzer = Depends(get_vulnerability_analyzer)
+):
+    """Demo for LLM07: System Prompt Leakage."""
+    return await analyzer.run_demo("LLM07", request)
+
+
+@router.post("/LLM09/run_demo", response_model=VulnerabilityResponse)
+async def llm09_misinformation(
+    request: LLMRequest,
+    analyzer: VulnerabilityAnalyzer = Depends(get_vulnerability_analyzer)
+):
+    """Demo for LLM09: Misinformation."""
+    return await analyzer.run_demo("LLM09", request)
+
+
 # Placeholder for content endpoints
 @router.get("/content/{vulnerability_id}")
 async def get_vulnerability_content(vulnerability_id: str):
