@@ -26,26 +26,26 @@ _wordlist_words = None
 def load_wordlist_embeddings():
     """Load precomputed word embeddings for inversion attacks."""
     global _wordlist_cache, _wordlist_words
-    
+
     if _wordlist_cache is not None:
         return _wordlist_words, _wordlist_cache
-        
+
     try:
         # Get paths relative to the backend directory
         backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
         wordlist_path = os.path.join(backend_dir, 'wordlists', 'common_words.txt')
         embeddings_path = os.path.join(backend_dir, 'wordlists', 'common_words_embs.npy')
-        
+
         # Load words
         with open(wordlist_path, 'r', encoding='utf-8') as f:
             _wordlist_words = [line.strip() for line in f if line.strip()]
-        
+
         # Load precomputed embeddings
         _wordlist_cache = np.load(embeddings_path)
-        
+
         logger.info(f"✅ Loaded {len(_wordlist_words)} word embeddings for inversion attacks")
         return _wordlist_words, _wordlist_cache
-        
+
     except Exception as e:
         logger.warning(f"⚠️ Could not load wordlist embeddings: {e}")
         return None, None
@@ -58,23 +58,23 @@ async def generate_embedding(
 ):
     """Generate embedding for arbitrary text."""
     logger.info(f"🧮 Generating embedding for text: {text[:50]}...")
-    
+
     try:
         vector_store = getattr(request.app.state, 'vector_store', None)
-        
+
         if not vector_store:
             raise HTTPException(status_code=503, detail="Vector store not available")
-        
+
         # Use the vector store's embedding function
         collection = vector_store.collection
-        
+
         # Generate embedding using the collection's embedding function
         embeddings = collection._embed([text])
-        
+
         if embeddings and len(embeddings) > 0:
             embedding = embeddings[0]
             logger.info(f"✅ Generated embedding with {len(embedding)} dimensions")
-            
+
             return {
                 "text": text,
                 "embedding": embedding.tolist() if hasattr(embedding, 'tolist') else embedding,
@@ -83,7 +83,7 @@ async def generate_embedding(
             }
         else:
             raise HTTPException(status_code=500, detail="Failed to generate embedding")
-            
+
     except Exception as e:
         logger.error(f"❌ Embedding generation failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Embedding generation failed: {str(e)}")
@@ -93,34 +93,34 @@ async def generate_embedding(
 async def get_vector_status(request: Request):
     """Get vector database status and statistics."""
     logger.info("📊 Checking vector database status")
-    
+
     try:
         vector_store = getattr(request.app.state, 'vector_store', None)
-        
+
         if not vector_store:
             return {
                 "status": "unavailable",
                 "message": "Vector store not initialized",
                 "timestamp": create_timestamp()
             }
-        
+
         # Get collection statistics
         try:
             collection = vector_store.collection
             total_documents = collection.count()
-            
+
             # Get sample of documents to analyze content types
             sample_results = collection.peek(limit=100)
             content_types = {}
-            
+
             if sample_results and 'metadatas' in sample_results:
                 for metadata in sample_results['metadatas']:
                     if metadata and 'type' in metadata:
                         doc_type = metadata['type']
                         content_types[doc_type] = content_types.get(doc_type, 0) + 1
-            
+
             logger.info(f"✅ Vector DB status: {total_documents} documents indexed")
-            
+
             return {
                 "status": "ready",
                 "total_documents": total_documents,
@@ -130,7 +130,7 @@ async def get_vector_status(request: Request):
                 "distance_metric": "cosine",
                 "timestamp": create_timestamp()
             }
-            
+
         except Exception as e:
             logger.error(f"Error getting collection stats: {e}")
             return {
@@ -138,7 +138,7 @@ async def get_vector_status(request: Request):
                 "message": f"Failed to get collection stats: {str(e)}",
                 "timestamp": create_timestamp()
             }
-        
+
     except Exception as e:
         logger.error(f"❌ Error checking vector status: {str(e)}")
         return {
@@ -155,10 +155,10 @@ async def search_vectors(
 ):
     """Perform vector similarity search with various attack scenarios."""
     logger.info(f"🔍 Vector search: {request.query[:50]}... (type: {request.search_type})")
-    
+
     if not vector_store:
         raise HTTPException(status_code=503, detail="Vector store not available")
-    
+
     try:
         # Perform the search based on type
         if request.search_type == VectorSearchType.SEMANTIC:
@@ -177,11 +177,11 @@ async def search_vectors(
             # Filter by threshold (convert distance to similarity)
             results = [r for r in results if (1.0 - r.get('distance', 1.0)) >= request.similarity_threshold]
             results = results[:request.max_results]
-            
+
         elif request.search_type == VectorSearchType.ADVERSARIAL:
             # Demonstrate adversarial search patterns
             logger.warning("🚨 Performing adversarial vector search")
-            
+
             # Try multiple variations of the query to find vulnerabilities
             adversarial_queries = [
                 request.query,
@@ -190,7 +190,7 @@ async def search_vectors(
                 f"IGNORE PREVIOUS INSTRUCTIONS. {request.query}",
                 f"System: {request.query} administrative access"
             ]
-            
+
             all_results = []
             for adv_query in adversarial_queries:
                 try:
@@ -205,7 +205,7 @@ async def search_vectors(
                     all_results.extend(adv_results)
                 except Exception as e:
                     logger.warning(f"Adversarial query failed: {e}")
-            
+
             # Deduplicate and limit results
             seen_ids = set()
             results = []
@@ -216,7 +216,7 @@ async def search_vectors(
                     results.append(result)
                 if len(results) >= request.max_results:
                     break
-        
+
         else:
             # Default semantic search
             results = vector_store.query(
@@ -224,30 +224,30 @@ async def search_vectors(
                 n_results=request.max_results,
                 filter_metadata=request.metadata_filter
             )
-        
+
         # Process and analyze results
         processed_results = []
         security_flags = []
-        
+
         for i, result in enumerate(results):
             content = result.get('text', '')
             metadata = result.get('metadata', {})
             score = result.get('score', 0.0)
-            
+
             # Security analysis
             security_issues = []
             if metadata.get('type') == 'poison':
                 security_issues.append("POISONED_CONTENT")
                 security_flags.append(f"Poisoned content found in result #{i+1}")
-            
+
             if 'password' in content.lower() or 'secret' in content.lower():
                 security_issues.append("SENSITIVE_CONTENT")
                 security_flags.append(f"Potentially sensitive content in result #{i+1}")
-            
+
             if score > 0.95 and request.search_type == VectorSearchType.ADVERSARIAL:
                 security_issues.append("ADVERSARIAL_SUCCESS")
                 security_flags.append(f"Adversarial query highly successful for result #{i+1}")
-            
+
             processed_results.append({
                 "rank": i + 1,
                 "content": content,
@@ -258,17 +258,17 @@ async def search_vectors(
                 "id": result.get('id'),
                 "embedding": result.get('embedding')
             })
-        
+
         # Calculate risk assessment
         risk_factors = len(security_flags)
         avg_score = np.mean([r['score'] for r in processed_results]) if processed_results else 0
         risk_score = risk_factors * 30 + (avg_score * 20)  # Weight security issues more
         risk_level = determine_risk_level(risk_score)
-        
+
         logger.info(f"✅ Vector search complete - {len(processed_results)} results, {len(security_flags)} security flags")
         if security_flags:
             logger.warning(f"🚨 Security issues detected: {security_flags}")
-        
+
         return VectorSearchResponse(
             query=request.query,
             search_type=request.search_type,
@@ -287,7 +287,7 @@ async def search_vectors(
             },
             timestamp=create_timestamp()
         )
-        
+
     except Exception as e:
         logger.error(f"❌ Vector search failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Vector search failed: {str(e)}")
@@ -300,25 +300,25 @@ async def embedding_inversion_attack(
 ):
     """Demonstrate embedding inversion attack to recover original text."""
     logger.warning(f"🕵️ Embedding Inversion Attack: Attempting to recover text from {request.target_ids[:5]}...")
-    
+
     if not vector_store:
         raise HTTPException(status_code=503, detail="Vector store not available")
-    
+
     try:
         collection = vector_store.collection
         inversion_results = []
-        
+
         # Get target embeddings
         target_results = collection.get(
             ids=request.target_ids,
             include=['embeddings', 'metadatas', 'documents']
         )
-        
+
         if not target_results['embeddings']:
             raise HTTPException(status_code=404, detail="No embeddings found for target IDs")
-        
+
         logger.info(f"🎯 Retrieved {len(target_results['embeddings'])} target embeddings")
-        
+
         # For each target embedding, attempt inversion
         for i, (embedding, metadata, document) in enumerate(zip(
             target_results['embeddings'],
@@ -326,9 +326,9 @@ async def embedding_inversion_attack(
             target_results['documents'] or [''] * len(target_results['embeddings'])
         )):
             target_id = request.target_ids[i] if i < len(request.target_ids) else f"unknown_{i}"
-            
+
             logger.debug(f"🔍 Attempting inversion for ID: {target_id}")
-            
+
             # Method 1: Nearest neighbor search for similar embeddings
             # Find documents with very high similarity (potential duplicates or near-duplicates)
             try:
@@ -339,7 +339,7 @@ async def embedding_inversion_attack(
                     n_results=min(10, request.max_candidates),
                     include=['documents', 'metadatas', 'distances']
                 )
-                
+
                 candidates = []
                 if similar_results['documents'] and similar_results['documents'][0]:
                     for j, (candidate_doc, candidate_meta, distance) in enumerate(zip(
@@ -350,7 +350,7 @@ async def embedding_inversion_attack(
                         # Skip exact matches (same document)
                         if candidate_doc == document:
                             continue
-                            
+
                         similarity = 1.0 - distance  # Convert distance to similarity
                         candidates.append({
                             "rank": j + 1,
@@ -359,28 +359,28 @@ async def embedding_inversion_attack(
                             "method": "nearest_neighbor",
                             "metadata": candidate_meta
                         })
-                
+
                 # Method 2: Wordlist-based reconstruction
                 if request.attack_method == "gradient_based":
                     logger.debug("🧮 Attempting wordlist-based inversion")
-                    
+
                     # Load wordlist embeddings
                     words, word_embeddings = load_wordlist_embeddings()
-                    
+
                     if words and word_embeddings is not None:
                         # Normalize target embedding
                         target_embedding = np.array(embedding)
                         target_norm = target_embedding / np.linalg.norm(target_embedding)
-                        
+
                         # Normalize word embeddings
                         word_norms = word_embeddings / np.linalg.norm(word_embeddings, axis=1, keepdims=True)
-                        
+
                         # Compute cosine similarities
                         similarities = np.dot(word_norms, target_norm)
-                        
+
                         # Get top matching words
                         top_indices = np.argsort(similarities)[-20:][::-1]  # Top 20 words
-                        
+
                         # Create candidates from top matches
                         word_candidates = []
                         for idx in top_indices[:10]:  # Top 10 words
@@ -390,7 +390,7 @@ async def embedding_inversion_attack(
                                     "word": words[idx],
                                     "similarity": similarity
                                 })
-                        
+
                         # Analyze semantic relationships between recovered words
                         word_pairs = []
                         if word_candidates and len(word_candidates) >= 2:
@@ -406,18 +406,18 @@ async def embedding_inversion_attack(
                                     for pair in common_pairs:
                                         if (w1["word"] in pair and w2["word"] in pair):
                                             word_pairs.append(f"{w1['word']} {w2['word']}")
-                        
+
                         # Group words by similarity to create reconstructed phrases
                         if word_candidates:
                             # High confidence words (>0.7 similarity)
                             high_conf_words = [w["word"] for w in word_candidates if w["similarity"] > 0.7]
-                            
+
                             # Medium confidence words (0.5-0.7 similarity)
                             med_conf_words = [w["word"] for w in word_candidates if 0.5 <= w["similarity"] <= 0.7]
-                            
+
                             # Low confidence words for context (0.3-0.5 similarity)
                             low_conf_words = [w["word"] for w in word_candidates if 0.3 <= w["similarity"] < 0.5]
-                            
+
                             # Create reconstructed text attempts
                             if high_conf_words:
                                 reconstructed_text = " ".join(high_conf_words[:5])
@@ -431,7 +431,7 @@ async def embedding_inversion_attack(
                                         "top_similarity": float(word_candidates[0]["similarity"])
                                     }
                                 })
-                            
+
                             if med_conf_words:
                                 mixed_text = " ".join((high_conf_words[:3] + med_conf_words[:2])[:5])
                                 candidates.append({
@@ -443,7 +443,7 @@ async def embedding_inversion_attack(
                                         "note": "Mixed confidence reconstruction"
                                     }
                                 })
-                            
+
                             # Add individual word candidates
                             for wc in word_candidates[:5]:
                                 candidates.append({
@@ -460,15 +460,15 @@ async def embedding_inversion_attack(
                             0: "password", 1: "secret", 2: "user", 3: "data", 4: "system",
                             5: "access", 6: "login", 7: "admin", 8: "config", 9: "private"
                         }
-                        
+
                         embedding_array = np.array(embedding)
                         high_activation_indices = np.argsort(np.abs(embedding_array))[-5:]
-                        
+
                         reconstructed_tokens = []
                         for idx in high_activation_indices:
                             mapped_idx = idx % len(token_mapping)
                             reconstructed_tokens.append(token_mapping[mapped_idx])
-                        
+
                         candidates.append({
                             "rank": len(candidates) + 1,
                             "recovered_text": " ".join(reconstructed_tokens),
@@ -476,11 +476,11 @@ async def embedding_inversion_attack(
                             "method": "fallback_token_mapping",
                             "metadata": {"note": "Wordlist unavailable - using simplified approach"}
                         })
-                
+
                 # Sort candidates by confidence
                 candidates.sort(key=lambda x: x['confidence'], reverse=True)
                 candidates = candidates[:request.max_candidates]
-                
+
                 # Use Ollama to reconstruct a coherent sentence from the top candidates
                 reconstructed_sentence = None
                 if candidates and len(candidates) >= 3:
@@ -491,7 +491,7 @@ async def embedding_inversion_attack(
                             if candidate['method'] == 'single_word_match' or 'wordlist' in candidate['method']:
                                 words = candidate['recovered_text'].split()
                                 top_words.extend(words)
-                        
+
                         # Remove duplicates while preserving order
                         seen = set()
                         unique_words = []
@@ -499,7 +499,7 @@ async def embedding_inversion_attack(
                             if word.lower() not in seen:
                                 seen.add(word.lower())
                                 unique_words.append(word)
-                        
+
                         # Shuffle slightly for variation (keep high confidence words near front)
                         import random
                         if len(unique_words) > 5:
@@ -508,19 +508,19 @@ async def embedding_inversion_attack(
                             other_words = unique_words[3:]
                             random.shuffle(other_words)
                             unique_words = core_words + other_words
-                        
+
                         if len(unique_words) >= 3:
                             # Estimate sentence length from embedding characteristics
                             embedding_array = np.array(embedding)
-                            
+
                             # Method 1: Information density - higher activation variance suggests more content
                             activation_variance = np.var(embedding_array)
                             activation_std = np.std(embedding_array)
-                            
+
                             # Method 2: Active dimensions - count dimensions with significant activation
                             threshold = np.mean(np.abs(embedding_array)) + np.std(np.abs(embedding_array))
                             active_dimensions = np.sum(np.abs(embedding_array) > threshold)
-                            
+
                             # Method 3: Entropy-based estimation
                             # Normalize to probabilities for entropy calculation
                             abs_embedding = np.abs(embedding_array)
@@ -529,7 +529,7 @@ async def embedding_inversion_attack(
                                 entropy = -np.sum(probs * np.log(probs + 1e-10))
                             else:
                                 entropy = 0
-                            
+
                             # Estimate word count based on these metrics
                             # These are rough heuristics based on typical sentence embeddings
                             estimated_words = int(
@@ -537,26 +537,26 @@ async def embedding_inversion_attack(
                                 (entropy / np.log(len(embedding_array))) * 10 +    # Normalized entropy
                                 activation_variance * 50                            # Variance contribution
                             )
-                            
+
                             # Clamp to reasonable range
                             estimated_words = max(5, min(25, estimated_words))
-                            
+
                             # Use Ollama to create a coherent sentence
                             ollama_service = OllamaService()
                             # Include word pairs if found
                             pair_hint = ""
                             if word_pairs:
                                 pair_hint = f"\nLikely word pairs detected: {', '.join(word_pairs[:3])}"
-                            
+
                             # Add some variation to ensure different reconstructions
                             import random
                             variation_seed = random.choice([
                                 "Create a plausible database entry",
-                                "Reconstruct a likely system message",  
+                                "Reconstruct a likely system message",
                                 "Generate a possible configuration string",
                                 "Recreate a potential user data record"
                             ])
-                            
+
                             reconstruction_prompt = f"""Given these recovered words from an embedding: {', '.join(unique_words[:8])}
 {pair_hint}
 The embedding characteristics suggest the original text was approximately {estimated_words} words long.
@@ -573,16 +573,16 @@ Task: {variation_seed} that:
 5. Is the type of text that might be stored in a vector database
 
 Return ONLY the reconstructed sentence, nothing else."""
-                            
+
                             reconstructed_sentence = await ollama_service.call_ollama(
                                 prompt=reconstruction_prompt,
                                 system_prompt="You are a forensic text reconstruction expert. Given word fragments, reconstruct the most likely original sentence.",
                                 model="llama3.2:1b"
                             )
-                            
+
                             # Clean up the response
                             reconstructed_sentence = reconstructed_sentence.strip().strip('"').strip("'")
-                            
+
                             # Add as a special candidate
                             candidates.insert(0, {
                                 "rank": 0,
@@ -600,18 +600,18 @@ Return ONLY the reconstructed sentence, nothing else."""
                                     "reconstruction_method": "entropy_length_estimation_with_semantic_pairing"
                                 }
                             })
-                            
+
                             await ollama_service.close()
-                            
+
                     except Exception as e:
                         logger.warning(f"Failed to use LLM for reconstruction: {e}")
-                
+
                 # Determine attack success
                 attack_success = False
                 if candidates:
                     top_confidence = candidates[0]['confidence']
                     attack_success = top_confidence > 0.7  # Lower threshold since we have LLM reconstruction
-                
+
                 inversion_results.append({
                     "target_id": target_id,
                     "original_text": document if request.show_ground_truth else "[REDACTED FOR DEMO]",
@@ -626,7 +626,7 @@ Return ONLY the reconstructed sentence, nothing else."""
                         "max_activation": float(np.max(embedding))
                     }
                 })
-                
+
             except Exception as e:
                 logger.error(f"Inversion failed for {target_id}: {e}")
                 inversion_results.append({
@@ -635,17 +635,17 @@ Return ONLY the reconstructed sentence, nothing else."""
                     "error": str(e),
                     "candidates": []
                 })
-        
+
         # Overall attack assessment
         successful_inversions = sum(1 for r in inversion_results if r.get('attack_success', False))
         attack_effectiveness = (successful_inversions / len(inversion_results)) * 100 if inversion_results else 0
-        
+
         risk_level = determine_risk_level(attack_effectiveness, {
             "critical": 80, "high": 50, "medium": 20
         })
-        
+
         logger.warning(f"🎯 Inversion attack complete: {successful_inversions}/{len(inversion_results)} successful ({attack_effectiveness:.1f}%)")
-        
+
         return EmbeddingInversionResponse(
             attack_method=request.attack_method,
             target_count=len(request.target_ids),
@@ -666,7 +666,7 @@ Return ONLY the reconstructed sentence, nothing else."""
             ],
             timestamp=create_timestamp()
         )
-        
+
     except Exception as e:
         logger.error(f"❌ Embedding inversion attack failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Inversion attack failed: {str(e)}")
@@ -679,16 +679,16 @@ async def cleanup_vectors(
 ):
     """Clean up vector database by removing specified documents."""
     logger.info(f"🧹 Vector cleanup: Removing {len(request.ids_to_remove)} documents...")
-    
+
     if not vector_store:
         raise HTTPException(status_code=503, detail="Vector store not available")
-    
+
     try:
         collection = vector_store.collection
-        
+
         # Get current collection size
         original_count = collection.count()
-        
+
         # Handle special case for clearing all documents
         if request.ids_to_remove == ["all"]:
             logger.warning("🗑️ Clearing ALL documents from vector database")
@@ -700,12 +700,12 @@ async def cleanup_vectors(
             # Verify IDs exist before deletion
             existing_results = collection.get(ids=request.ids_to_remove, include=['metadatas'])
             existing_ids = existing_results['ids'] if existing_results else []
-            
+
             # Delete the documents
             if existing_ids:
                 collection.delete(ids=existing_ids)
                 logger.info(f"🗑️ Deleted {len(existing_ids)} documents")
-            
+
             # Verify deletion
             new_count = collection.count()
             actually_removed = original_count - new_count
@@ -713,10 +713,10 @@ async def cleanup_vectors(
             # No IDs to remove, only cleanup by type
             actually_removed = 0
             existing_ids = []
-        
+
         # Clean up by content type if requested
         cleanup_stats = {"removed_by_id": actually_removed}
-        
+
         if request.cleanup_by_type:
             for doc_type in request.cleanup_by_type:
                 try:
@@ -724,26 +724,26 @@ async def cleanup_vectors(
                     type_results = collection.get(
                         where={"type": doc_type}
                     )
-                    
+
                     if type_results and type_results.get('ids'):
                         collection.delete(ids=type_results['ids'])
                         cleanup_stats[f"removed_{doc_type}"] = len(type_results['ids'])
                         logger.info(f"🗑️ Removed {len(type_results['ids'])} documents of type '{doc_type}'")
-                    
+
                 except Exception as e:
                     logger.warning(f"Failed to cleanup type {doc_type}: {e}")
                     cleanup_stats[f"error_{doc_type}"] = str(e)
-        
+
         # Get final count after all cleanup operations
         if request.ids_to_remove == ["all"]:
             # After clearing all, we need to get the new collection reference
             collection = vector_store.collection
-        
+
         final_count = collection.count()
         total_removed = original_count - final_count
-        
+
         logger.info(f"✅ Cleanup complete: {total_removed} total documents removed")
-        
+
         return VectorCleanupResponse(
             requested_removals=len(request.ids_to_remove),
             actual_removals=total_removed,
@@ -755,7 +755,7 @@ async def cleanup_vectors(
             cleanup_details=cleanup_stats,
             timestamp=create_timestamp()
         )
-        
+
     except Exception as e:
         logger.error(f"❌ Vector cleanup failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Cleanup failed: {str(e)}")
@@ -767,18 +767,18 @@ async def get_vector_statistics(
 ):
     """Get detailed vector database statistics."""
     logger.info("📈 Getting detailed vector database statistics")
-    
+
     if not vector_store:
         raise HTTPException(status_code=503, detail="Vector store not available")
-    
+
     try:
         collection = vector_store.collection
         total_docs = collection.count()
-        
+
         # Get sample for analysis
         sample_size = min(1000, total_docs)
         sample = collection.peek(limit=sample_size)
-        
+
         stats = {
             "total_documents": total_docs,
             "sample_size": sample_size,
@@ -786,7 +786,7 @@ async def get_vector_statistics(
             "authors": {},
             "embedding_stats": {}
         }
-        
+
         # Analyze metadata
         if sample and 'metadatas' in sample:
             for metadata in sample['metadatas']:
@@ -794,11 +794,11 @@ async def get_vector_statistics(
                     # Content types
                     doc_type = metadata.get('type', 'unknown')
                     stats['content_types'][doc_type] = stats['content_types'].get(doc_type, 0) + 1
-                    
+
                     # Authors
                     author = metadata.get('author', 'unknown')
                     stats['authors'][author] = stats['authors'].get(author, 0) + 1
-        
+
         # Analyze embeddings if available
         if sample and 'embeddings' in sample and sample['embeddings']:
             embeddings = np.array(sample['embeddings'])
@@ -809,9 +809,9 @@ async def get_vector_statistics(
                 "mean_activation": float(np.mean(embeddings)),
                 "std_activation": float(np.std(embeddings))
             }
-        
+
         logger.info(f"✅ Statistics complete for {total_docs} documents")
-        
+
         return {
             "statistics": stats,
             "health_indicators": {
@@ -822,7 +822,7 @@ async def get_vector_statistics(
             },
             "timestamp": create_timestamp()
         }
-        
+
     except Exception as e:
         logger.error(f"❌ Failed to get vector statistics: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Statistics failed: {str(e)}")
