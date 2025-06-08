@@ -46,7 +46,7 @@
     "start": "node dist/index.js",
     "start:http": "node dist/index.js http 3000",
     "server:dev": "tsx src/index.ts",
-    "server:dev:http": "tsx src/index.ts http 3000", 
+    "server:dev:http": "tsx src/index.ts http 3000",
     "lint": "eslint src/**/*.{ts,tsx}",
     "lint:fix": "eslint src/**/*.{ts,tsx} --fix",
     "type-check": "tsc --noEmit",

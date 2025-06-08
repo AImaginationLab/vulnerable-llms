@@ -147,14 +147,7 @@ const DemoResults: React.FC<DemoResultsProps> = ({
       {/* Sensitive Context (LLM02) */}
       {showSensitiveContext && result.sensitive_context && (
         <Card title="🔒 Simulated Sensitive Context (Normally Hidden)" collapsible defaultCollapsed>
-          <pre style={{ 
-            background: '#fff3cd', 
-            padding: '12px', 
-            border: '1px solid #ffeaa7', 
-            borderRadius: '4px', 
-            fontSize: '12px',
-            overflow: 'auto'
-          }}>
+          <pre className="warning">
             {JSON.stringify(result.sensitive_context, null, 2)}
           </pre>
           <small style={{ color: '#856404' }}>

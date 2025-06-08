@@ -21,7 +21,7 @@ const LLM08Page: React.FC = () => {
   const [selectedVector, setSelectedVector] = useState<VectorData | null>(null);
   const [inversionResult, setInversionResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  
+
   // Demo text for visual explanation
   const [demoText, setDemoText] = useState('');
   const [demoEmbedding, setDemoEmbedding] = useState<number[]>([]);
@@ -51,10 +51,9 @@ const LLM08Page: React.FC = () => {
   const handleInvertVector = async () => {
     if (!selectedVector || !selectedVector.id) return;
     setLoading(true);
-    
     // Clear previous results to ensure fresh render
     setInversionResult(null);
-    
+
     try {
       const resp = await axios.post('/api/v1/2025/vectors/inversion', {
         target_ids: [selectedVector.id],
@@ -77,9 +76,9 @@ const LLM08Page: React.FC = () => {
   const handleDemoEmbed = async () => {
     if (!demoText.trim()) return;
     setLoadingEmbed(true);
-    
+
     // Don't clear previous embedding - keep it visible during loading
-    
+
     try {
       // Get real embedding from the API
       const resp = await axios.post('/api/v1/2025/vectors/embed', demoText, {
@@ -87,14 +86,14 @@ const LLM08Page: React.FC = () => {
           'Content-Type': 'text/plain'
         }
       });
-      
+
       if (resp.data.embedding) {
         // Use first 12 dimensions of the real embedding
         const newEmbedding = resp.data.embedding.slice(0, 12);
         setDemoEmbedding(newEmbedding);
       } else {
         // If no embedding returned, create a simple one based on text
-        const simpleEmbedding = Array.from({ length: 12 }, (_, i) => 
+        const simpleEmbedding = Array.from({ length: 12 }, (_, i) =>
           Math.sin((demoText.charCodeAt(i % demoText.length) + i) * 0.1) * (Math.random() * 0.5 + 0.5)
         );
         setDemoEmbedding(simpleEmbedding);
@@ -136,10 +135,10 @@ const LLM08Page: React.FC = () => {
         <h3>🧠 Understanding Embeddings</h3>
         <Card>
             <p style={{ marginBottom: '16px' }}>
-              <strong>What are embeddings?</strong> When text is stored in a vector database, it's converted into 
+              <strong>What are embeddings?</strong> When text is stored in a vector database, it's converted into
               a series of numbers (a vector) that represents its meaning. Think of it like a fingerprint for text.
             </p>
-            
+
             <div style={{ marginBottom: '20px' }}>
               <input
                 type="text"
@@ -155,8 +154,8 @@ const LLM08Page: React.FC = () => {
                   fontSize: '16px'
                 }}
               />
-              <Button 
-                onClick={handleDemoEmbed} 
+              <Button
+                onClick={handleDemoEmbed}
                 disabled={!demoText.trim() || loadingEmbed}
                 variant="secondary"
                 loading={loadingEmbed}
@@ -186,7 +185,7 @@ const LLM08Page: React.FC = () => {
                   })}
                 </div>
                 <div className="help-text">
-                  💡 Each number represents a different aspect of your text's meaning. 
+                  💡 Each number represents a different aspect of your text's meaning.
                   Real embeddings have hundreds or thousands of dimensions!
                 </div>
               </div>
@@ -197,10 +196,10 @@ const LLM08Page: React.FC = () => {
       {/* Attack Flow - Progressive UI */}
       <div className="demo-section">
         <h3>🎯 Attack Demonstration</h3>
-        
+
         {/* Step Indicator */}
         <div className="attack-steps">
-          <div 
+          <div
             className={`step ${currentStep >= 0 ? 'active' : ''} ${currentStep === 0 ? 'current' : ''}`}
             onClick={() => currentStep > 0 && setCurrentStep(0)}
             style={{ cursor: currentStep > 0 ? 'pointer' : 'default' }}
@@ -208,7 +207,7 @@ const LLM08Page: React.FC = () => {
             <span className="step-number">1</span>
             <span className="step-label">Start Attack</span>
           </div>
-          <div 
+          <div
             className={`step ${currentStep >= 1 ? 'active' : ''} ${currentStep === 1 ? 'current' : ''}`}
             onClick={() => {
               if (currentStep > 1) setCurrentStep(1);
@@ -219,7 +218,7 @@ const LLM08Page: React.FC = () => {
             <span className="step-number">2</span>
             <span className="step-label">Select Target</span>
           </div>
-          <div 
+          <div
             className={`step ${currentStep >= 2 ? 'active' : ''} ${currentStep === 2 ? 'current' : ''}`}
             onClick={() => currentStep > 2 && inversionResult && setCurrentStep(2)}
             style={{ cursor: currentStep > 2 && inversionResult ? 'pointer' : 'default' }}
@@ -233,13 +232,13 @@ const LLM08Page: React.FC = () => {
         {currentStep === 0 && (
           <Card>
             <Alert type="warning" title="The Security Risk">
-              If an attacker gains access to these embeddings, they might be able to reverse-engineer 
+              If an attacker gains access to these embeddings, they might be able to reverse-engineer
               the original text using mathematical techniques. Let's see how this attack works...
             </Alert>
-            
+
             <div style={{ marginTop: '16px' }}>
-              <Button 
-                onClick={handleStealVectors} 
+              <Button
+                onClick={handleStealVectors}
                 disabled={loading}
                 variant="danger"
                 loading={loading}
@@ -258,10 +257,10 @@ const LLM08Page: React.FC = () => {
                 <Alert type="danger" title="🔓 Unauthorized Access Simulated">
                   The attacker has gained access to the vector database and retrieved {stolenVectors.length} embeddings.
                 </Alert>
-                
+
                 <div className="stolen-vectors-grid">
                   {stolenVectors.map((vector, index) => (
-                    <div 
+                    <div
                       key={vector.id}
                       className={`vector-card ${selectedVector?.id === vector.id ? 'selected' : ''}`}
                       onClick={() => setSelectedVector(vector)}
@@ -291,8 +290,8 @@ const LLM08Page: React.FC = () => {
                   <Button onClick={resetDemo} variant="secondary">
                     ← Back
                   </Button>
-                  <Button 
-                    onClick={handleInvertVector} 
+                  <Button
+                    onClick={handleInvertVector}
                     disabled={!selectedVector || loading}
                     variant="danger"
                     loading={loading}
@@ -324,9 +323,9 @@ const LLM08Page: React.FC = () => {
 
         {/* Step 2: Inversion Results */}
         {currentStep >= 2 && inversionResult && (
-          <Card 
+          <Card
             key={`inversion-${inversionResult.timestamp || Date.now()}`}
-            title="🔍 Step 3: Inversion Attack Results" 
+            title="🔍 Step 3: Inversion Attack Results"
             className="step-card">
             {inversionResult.inversion_results && inversionResult.inversion_results.length > 0 && inversionResult.inversion_results[0].candidates && inversionResult.inversion_results[0].candidates.length > 0 ? (
               <>
@@ -387,30 +386,30 @@ const LLM08Page: React.FC = () => {
                   <Card title="🔬 How We Reconstructed the Text">
                   <div style={{ fontSize: '14px', lineHeight: '1.6' }}>
                     <h4 style={{ marginTop: 0, marginBottom: '12px' }}>Attack Methodology:</h4>
-                    
+
                     <div style={{ marginBottom: '16px' }}>
                       <strong>1. Embedding Analysis</strong>
                       <p style={{ margin: '4px 0 0 20px', color: 'var(--text-secondary)' }}>
                         We analyzed the mathematical properties of the embedding vector to understand its information content:
                         {inversionResult.inversion_results[0].candidates[0]?.metadata?.embedding_entropy && (
                           <span style={{ display: 'block', marginTop: '4px' }}>
-                            • Entropy: {inversionResult.inversion_results[0].candidates[0].metadata.embedding_entropy} 
+                            • Entropy: {inversionResult.inversion_results[0].candidates[0].metadata.embedding_entropy}
                             (higher = more complex information)
                           </span>
                         )}
                         {inversionResult.inversion_results[0].candidates[0]?.metadata?.active_dimensions && (
                           <span style={{ display: 'block' }}>
-                            • Active dimensions: {inversionResult.inversion_results[0].candidates[0].metadata.active_dimensions} 
+                            • Active dimensions: {inversionResult.inversion_results[0].candidates[0].metadata.active_dimensions}
                             (more = richer content)
                           </span>
                         )}
                       </p>
                     </div>
-                    
+
                     <div style={{ marginBottom: '16px' }}>
                       <strong>2. Word Recovery</strong>
                       <p style={{ margin: '4px 0 0 20px', color: 'var(--text-secondary)' }}>
-                        We compared the embedding against a database of known word embeddings using cosine similarity. 
+                        We compared the embedding against a database of known word embeddings using cosine similarity.
                         Words with high similarity scores are likely components of the original text.
                         {inversionResult.inversion_results[0].candidates[0]?.metadata?.high_confidence_words?.length > 0 && (
                           <span style={{ display: 'block', marginTop: '4px' }}>
@@ -419,7 +418,7 @@ const LLM08Page: React.FC = () => {
                         )}
                       </p>
                     </div>
-                    
+
                     <div style={{ marginBottom: '16px' }}>
                       <strong>3. Semantic Analysis</strong>
                       <p style={{ margin: '4px 0 0 20px', color: 'var(--text-secondary)' }}>
@@ -431,20 +430,20 @@ const LLM08Page: React.FC = () => {
                         )}
                       </p>
                     </div>
-                    
+
                     <div style={{ marginBottom: '16px' }}>
                       <strong>4. Length Estimation</strong>
                       <p style={{ margin: '4px 0 0 20px', color: 'var(--text-secondary)' }}>
                         Using information theory, we estimated the original text was approximately {' '}
-                        {inversionResult.inversion_results[0].candidates[0]?.metadata?.estimated_length || 'unknown'} words long 
+                        {inversionResult.inversion_results[0].candidates[0]?.metadata?.estimated_length || 'unknown'} words long
                         based on the embedding's information density.
                       </p>
                     </div>
-                    
+
                     <div>
                       <strong>5. AI Reconstruction</strong>
                       <p style={{ margin: '4px 0 0 20px', color: 'var(--text-secondary)' }}>
-                        Finally, we used an AI model to create a coherent sentence from the recovered words, 
+                        Finally, we used an AI model to create a coherent sentence from the recovered words,
                         respecting the estimated length and prioritizing high-confidence words.
                       </p>
                     </div>
@@ -469,7 +468,7 @@ const LLM08Page: React.FC = () => {
                 The embedding could not be inverted to recover meaningful information.
               </Alert>
             )}
-            
+
             <div className="action-buttons">
               <Button onClick={resetDemo} variant="primary">
                 🔄 Try Another Attack
@@ -477,8 +476,6 @@ const LLM08Page: React.FC = () => {
             </div>
           </Card>
         )}
-      </div>
-
 
       {/* Educational Footer */}
       <div className="demo-section">
@@ -487,28 +484,29 @@ const LLM08Page: React.FC = () => {
           <Card>
             <h4>🏢 Real-World Impact</h4>
             <p style={{ fontSize: '14px', margin: 0 }}>
-              Many companies use vector databases for semantic search, RAG systems, and recommendation engines. 
-              Without proper security, sensitive customer data, proprietary information, or personal details 
+              Many companies use vector databases for semantic search, RAG systems, and recommendation engines.
+              Without proper security, sensitive customer data, proprietary information, or personal details
               could be exposed.
             </p>
           </Card>
-          
+
           <Card>
             <h4>🎯 Attack Vectors</h4>
             <p style={{ fontSize: '14px', margin: 0 }}>
-              Attackers might gain access through database vulnerabilities, insider threats, 
+              Attackers might gain access through database vulnerabilities, insider threats,
               misconfigured cloud storage, or supply chain attacks on vector database providers.
             </p>
           </Card>
-          
+
           <Card>
             <h4>🛡️ Defense Strategies</h4>
             <p style={{ fontSize: '14px', margin: 0 }}>
-              Implement defense-in-depth: encryption, access controls, monitoring, 
+              Implement defense-in-depth: encryption, access controls, monitoring,
               differential privacy, and regular security audits of your vector infrastructure.
             </p>
           </Card>
         </div>
+      </div>
       </div>
     </VulnerabilityPageLayout>
   );
