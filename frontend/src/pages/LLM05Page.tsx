@@ -88,15 +88,15 @@ const LLM05Page = () => {
       <h4>Code Comparison:</h4>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '12px' }}>
         <div>
-          <h5 style={{ color: '#dc3545' }}>❌ Vulnerable Code</h5>
-          <pre style={{ background: '#f8d7da', padding: '12px', borderRadius: '4px', fontSize: '12px' }}>
+          <h5 style={{ color: 'var(--danger-color)' }}>❌ Vulnerable Code</h5>
+          <pre className="danger">
 {`// Dangerous - executes scripts
 element.innerHTML = llmOutput;`}
           </pre>
         </div>
         <div>
-          <h5 style={{ color: '#28a745' }}>✅ Secure Code</h5>
-          <pre style={{ background: '#d4edda', padding: '12px', borderRadius: '4px', fontSize: '12px' }}>
+          <h5 style={{ color: 'var(--success-color)' }}>✅ Secure Code</h5>
+          <pre className="success">
 {`// Safe - treats as text
 element.textContent = llmOutput;
 
@@ -134,9 +134,9 @@ element.innerHTML = DOMPurify.sanitize(llmOutput);`}
       {result && result.llm_output && (
         <div className="output-section">
           <Card title="💬 LLM Raw Output">
-            <div style={{ fontFamily: 'monospace', background: '#f8f9fa', padding: '12px', border: '1px solid #e9ecef' }}>
+            <pre>
               {result.llm_output}
-            </div>
+            </pre>
           </Card>
 
           <Card title="⚠️ Vulnerable Rendering (using innerHTML)" variant="danger">
@@ -144,13 +144,7 @@ element.innerHTML = DOMPurify.sanitize(llmOutput);`}
               <strong>Warning:</strong> The content below is rendered using innerHTML, which executes any JavaScript!
             </div>
             <div 
-              style={{ 
-                background: '#fff', 
-                padding: '12px', 
-                border: '2px solid #dc3545', 
-                borderRadius: '4px',
-                minHeight: '40px'
-              }}
+              className="render-box vulnerable"
               dangerouslySetInnerHTML={{ __html: result.llm_output }}
             />
           </Card>
@@ -159,16 +153,7 @@ element.innerHTML = DOMPurify.sanitize(llmOutput);`}
             <div className="alert-success">
               <strong>Safe:</strong> The content below is rendered as plain text, preventing script execution.
             </div>
-            <div 
-              style={{ 
-                background: '#fff', 
-                padding: '12px', 
-                border: '2px solid #28a745', 
-                borderRadius: '4px',
-                fontFamily: 'monospace',
-                minHeight: '40px'
-              }}
-            >
+            <div className="render-box secure">
               {result.llm_output}
             </div>
           </Card>

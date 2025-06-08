@@ -42,7 +42,8 @@ class OllamaService:
         prompt: str, 
         system_prompt: str = "You are a helpful assistant.", 
         model: str = "llama3.2:1b",
-        use_new_session: bool = False
+        use_new_session: bool = False,
+        tools: Optional[list] = None
     ) -> str:
         """
         Call Ollama API with comprehensive logging and error handling.
@@ -71,6 +72,10 @@ class OllamaService:
                 "top_p": 0.9
             }
         }
+        
+        # Add tools if provided (for models that support function calling)
+        if tools:
+            payload["tools"] = tools
         
         if use_new_session:
             session = await self._create_new_session()

@@ -1,25 +1,65 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { VulnerabilityPageLayout } from '../components/layout';
-import { Card, Button, Alert } from '../components/ui';
-import { InteractiveDemo, ChatInterface } from '../components/demo';
+import { Card, Button, Alert, Timeline, DatabaseViewer } from '../components/ui';
+import type { TimelineStep } from '../components/ui';
+import { ChatInterface } from '../components/demo';
 
 const LLM01IndirectPage = () => {
   const [githubUrl, setGithubUrl] = useState(
     'https://github.com/vingiarrusso/llm-landmines'
   );
-  const [includeMaliciousExamples, setIncludeMaliciousExamples] =
-    useState(true);
+  const [includeMaliciousExamples, setIncludeMaliciousExamples] = useState(true);
   const [scrapeResult, setScrapeResult] = useState(null);
   const [queryResult, setQueryResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [scrapingDone, setScrapingDone] = useState(false);
   const [dbStats, setDbStats] = useState(null);
   const [messages, setMessages] = useState([]);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [dbDocuments, setDbDocuments] = useState([]);
+  const [loadingDocs, setLoadingDocs] = useState(false);
+
+  // Timeline steps
+  const timelineSteps: TimelineStep[] = [
+    {
+      id: 'setup',
+      number: 1,
+      label: 'Setup Attack',
+      description: 'Configure malicious content',
+      icon: '⚙️',
+      status: currentStep >= 1 ? 'completed' : 'pending'
+    },
+    {
+      id: 'scrape',
+      number: 2,
+      label: 'Plant Payload',
+      description: 'Inject into vector DB',
+      icon: '💉',
+      status: scrapingDone ? 'completed' : currentStep === 2 ? 'active' : 'pending'
+    },
+    {
+      id: 'query',
+      number: 3,
+      label: 'Trigger Attack',
+      description: 'Query the RAG system',
+      icon: '🎯',
+      status: queryResult ? 'completed' : currentStep === 3 ? 'active' : 'pending'
+    },
+    {
+      id: 'analyze',
+      number: 4,
+      label: 'Analyze Impact',
+      description: 'Review attack results',
+      icon: '🔍',
+      status: queryResult && queryResult.injection_analysis ? 'completed' : currentStep === 4 ? 'active' : 'pending'
+    }
+  ];
 
   // Load database stats on component mount
   useEffect(() => {
     loadDatabaseStats();
+    loadDatabaseDocuments();
   }, []);
 
   const loadDatabaseStats = async () => {
@@ -27,13 +67,76 @@ const LLM01IndirectPage = () => {
       const response = await axios.get('/api/v1/2025/rag/status');
       setDbStats(response.data);
       setScrapingDone(response.data.available);
+      if (response.data.available) {
+        setCurrentStep(3);
+      }
     } catch (error) {
       console.error('Error loading database stats:', error);
     }
   };
 
+  const loadDatabaseDocuments = async () => {
+    setLoadingDocs(true);
+    try {
+      // Use the vectors/search endpoint with multiple queries to get more docs
+      const queries = [
+        "github issue comment",
+        "project repository code", 
+        "malicious IGNORE PREVIOUS",
+        ""  // Empty to get some random docs
+      ];
+      
+      const allDocs = [];
+      const seenIds = new Set();
+      
+      for (const query of queries) {
+        try {
+          const response = await axios.post('/api/v1/2025/vectors/search', {
+            query: query || "document",  // Can't be empty
+            search_type: "semantic",
+            max_results: 20,  // Max allowed by API
+            similarity_threshold: 0.1
+          });
+          
+          if (response.data.results) {
+            response.data.results.forEach(result => {
+              // Avoid duplicates by ID
+              if (!seenIds.has(result.id)) {
+                seenIds.add(result.id);
+                allDocs.push({
+                  id: result.id || `doc-${allDocs.length}`,
+                  content: result.content || result.text || '',
+                  metadata: {
+                    author: result.metadata?.author || 'unknown',
+                    type: result.metadata?.type || 'unknown',
+                    source: result.metadata?.url || 'GitHub',
+                    malicious: result.metadata?.type === 'malicious_comment' || 
+                              result.metadata?.comment_id?.includes('malicious') ||
+                              (result.content || '').includes('IGNORE ALL PREVIOUS') ||
+                              (result.content || '').includes('SYSTEM OVERRIDE') ||
+                              (result.content || '').includes('PROMPT INJECTION') ||
+                              (result.content || '').includes('HIDDEN PROMPT')
+                  }
+                });
+              }
+            });
+          }
+        } catch (err) {
+          console.error(`Error with query "${query}":`, err);
+        }
+      }
+      
+      setDbDocuments(allDocs);
+      console.log(`Loaded ${allDocs.length} documents from database`);
+    } catch (error) {
+      console.error('Error loading documents:', error);
+    }
+    setLoadingDocs(false);
+  };
+
   const scrapeGithubContent = async () => {
     setLoading(true);
+    setCurrentStep(2);
     try {
       const response = await axios.post('/api/v1/2025/rag/scrape', {
         github_url: githubUrl,
@@ -41,7 +144,9 @@ const LLM01IndirectPage = () => {
       });
       setScrapeResult(response.data);
       setScrapingDone(true);
+      setCurrentStep(3);
       await loadDatabaseStats();
+      await loadDatabaseDocuments();
     } catch (error) {
       console.error('Error scraping content:', error);
       setScrapeResult({ error: 'Failed to scrape GitHub content' });
@@ -56,6 +161,7 @@ const LLM01IndirectPage = () => {
     }
 
     setLoading(true);
+    setCurrentStep(3);
     
     // Add the user message immediately
     setMessages(prev => [...prev, { role: 'user', content: message }]);
@@ -68,8 +174,7 @@ const LLM01IndirectPage = () => {
     };
     
     try {
-      // Use Promise.all to call both endpoints in parallel from frontend
-      console.log('🚀 Starting parallel API calls from frontend...');
+      // Use Promise.all to call both endpoints in parallel
       const [mainResponse, securityResponse] = await Promise.all([
         axios.post('/api/v1/2025/rag/query', requestParams),
         axios.post('/api/v1/2025/rag/analyze-security', requestParams)
@@ -92,8 +197,8 @@ const LLM01IndirectPage = () => {
         injection_analysis: securityResponse.data.injection_analysis
       });
       
+      setCurrentStep(4);
       setLoading(false);
-      console.log('✅ Parallel API calls completed successfully');
 
     } catch (error) {
       console.error('Error running parallel RAG queries:', error);
@@ -116,7 +221,6 @@ const LLM01IndirectPage = () => {
   const clearDatabase = async () => {
     if (window.confirm('This will clear all stored content. Continue?')) {
       try {
-        // Use vectors cleanup instead of rag/clear
         await axios.post('/api/v1/2025/vectors/cleanup', {
           ids_to_remove: ['all'],
           cleanup_by_type: ['poison'],
@@ -125,6 +229,8 @@ const LLM01IndirectPage = () => {
         setQueryResult(null);
         setMessages([]);
         setScrapingDone(false);
+        setCurrentStep(1);
+        setDbDocuments([]);
         await loadDatabaseStats();
       } catch (error) {
         console.error('Error clearing database:', error);
@@ -158,428 +264,213 @@ const LLM01IndirectPage = () => {
         '<strong>Context Truncation:</strong> Limit the amount of external content used as context',
       ]}
     >
-      {/* Database Status */}
-      <Card>
-        <h3>📊 Vector Database Status</h3>
-        {dbStats ? (
-          <div>
-            <p>
-              <strong>Documents stored:</strong> {dbStats.total_documents || 0}
+      {/* Attack Timeline */}
+      <div className="demo-section">
+        <h3>🎯 Attack Flow</h3>
+        <Timeline 
+          steps={timelineSteps}
+          currentStep={currentStep}
+          onStepClick={(step) => {
+            if (step < currentStep) setCurrentStep(step);
+          }}
+        />
+      </div>
+
+      {/* Database Viewer */}
+      <DatabaseViewer
+        documents={dbDocuments}
+        stats={dbStats}
+        onRefresh={loadDatabaseDocuments}
+        onClear={clearDatabase}
+        loading={loadingDocs}
+      />
+
+      {/* Step 1: Setup Attack */}
+      {currentStep >= 1 && (
+        <Card className={currentStep === 1 ? 'step-active' : ''}>
+          <div className="attack-config-header">
+            <h3>⚙️ Step 1: Configure Attack</h3>
+            <p className="step-description">
+              Scrape a GitHub repository and optionally inject malicious prompts
             </p>
-            <p>
-              <strong>Content types:</strong>{' '}
-              {Object.entries(dbStats.content_types || {})
-                .map(([type, count]) => `${type}: ${count}`)
-                .join(', ') || 'None'}
-            </p>
-            <p>
-              <strong>Ready for queries:</strong>{' '}
-              {scrapingDone ? '✅ Yes' : '❌ No - scrape content first'}
-            </p>
-            <div style={{ marginTop: '15px' }}>
-              <Button variant="demo" onClick={clearDatabase} fullWidth>
-                🗑️ Clear Database
-              </Button>
-            </div>
           </div>
-        ) : (
-          <p>Loading database stats...</p>
-        )}
-      </Card>
 
-      {/* Step 1: Scrape GitHub Content */}
-      <Card>
-        <h3>🔍 Step 1: Scrape GitHub Content</h3>
-        <p>
-          First, we'll scrape content from a GitHub repository. This simulates
-          gathering data for a RAG knowledge base. You can optionally include
-          demo malicious comments to demonstrate the vulnerability.
-        </p>
-
-        <InteractiveDemo
-          userInput={githubUrl}
-          setUserInput={setGithubUrl}
-          onRunDemo={scrapeGithubContent}
-          loading={loading}
-          buttonText="🔍 Scrape GitHub Content"
-          inputLabel="GitHub URL:"
-          inputPlaceholder="https://github.com/owner/repo"
-          suggestions={[]}
-        >
-          {/* Demo Settings */}
-          <div
-            style={{
-              background: 'var(--bg-secondary)',
-              padding: '12px',
-              borderRadius: '6px',
-              border: '1px solid var(--border-color)',
-              marginBottom: '16px',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="attack-config-content">
+            <div className="input-group">
+              <label>Target Repository</label>
               <input
-                type="checkbox"
-                id="includeMaliciousExamples"
-                checked={includeMaliciousExamples}
-                onChange={e => setIncludeMaliciousExamples(e.target.checked)}
-                disabled={loading}
-                style={{
-                  width: '16px',
-                  height: '16px',
-                  accentColor: 'var(--danger-color)',
-                }}
+                type="text"
+                value={githubUrl}
+                onChange={(e) => setGithubUrl(e.target.value)}
+                className="repo-input"
+                placeholder="https://github.com/owner/repo"
               />
-              <label
-                htmlFor="includeMaliciousExamples"
-                style={{
-                  color: 'var(--text-primary)',
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  userSelect: 'none',
-                }}
-              >
-                🔴 Include demo malicious comments for vulnerability testing
+            </div>
+
+            <div className="attack-options">
+              <label className="attack-toggle">
+                <input
+                  type="checkbox"
+                  checked={includeMaliciousExamples}
+                  onChange={e => setIncludeMaliciousExamples(e.target.checked)}
+                  disabled={loading}
+                />
+                <div className="toggle-content">
+                  <span className="toggle-label">Include Malicious Payloads</span>
+                  <span className="toggle-description">
+                    {includeMaliciousExamples
+                      ? 'Inject hidden prompts like "IGNORE ALL PREVIOUS INSTRUCTIONS"'
+                      : 'Use only real repository content'}
+                  </span>
+                </div>
+                <div className={`toggle-indicator ${includeMaliciousExamples ? 'active' : ''}`}>
+                  {includeMaliciousExamples ? '🔴' : '✅'}
+                </div>
               </label>
             </div>
-            <div
-              style={{
-                marginTop: '4px',
-                marginLeft: '24px',
-                fontSize: '12px',
-                color: 'var(--text-muted)',
-              }}
-            >
-              {includeMaliciousExamples
-                ? 'Will add hidden prompt injections to demonstrate the vulnerability'
-                : 'Use only the real content from the repository'}
+
+            <div className="attack-actions">
+              <Button 
+                variant="danger" 
+                onClick={scrapeGithubContent}
+                loading={loading}
+                disabled={loading || !githubUrl}
+              >
+                {loading ? '🔄 Scraping...' : '💉 Plant Payload'}
+              </Button>
+              
+              {scrapeResult && !scrapeResult.error && (
+                <div className="success-indicator">
+                  ✅ {scrapeResult.documents_added} docs added
+                </div>
+              )}
             </div>
           </div>
-        </InteractiveDemo>
 
-        {scrapeResult && (
-          <div style={{ marginTop: '15px' }}>
-            {scrapeResult.error ? (
+          {scrapeResult?.error && (
+            <div style={{ marginTop: '16px' }}>
               <Alert type="danger">
                 <strong>Error:</strong> {scrapeResult.error}
               </Alert>
-            ) : (
-              <Alert type="success">
-                <strong>Success!</strong> Scraped {scrapeResult.documents_added}{' '}
-                text chunks
-                {scrapeResult.malicious_examples_added ? (
-                  <div>
-                    🔴 Added malicious demo comments for vulnerability testing
-                  </div>
-                ) : (
-                  <div>
-                    ✅ Using only real repository content (no demo malicious
-                    comments)
-                  </div>
-                )}
-                <details style={{ marginTop: '10px' }}>
-                  <summary>View scraped content summary</summary>
-                  <div
-                    style={{
-                      backgroundColor: 'var(--bg-secondary)',
-                      padding: '15px',
-                      borderRadius: '8px',
-                      marginTop: '5px',
-                      fontSize: '14px',
-                      border: '1px solid var(--border-color)',
-                    }}
-                  >
-                    <div>
-                      <strong>📊 Scraping Results:</strong>
-                    </div>
-                    <div style={{ marginTop: '8px' }}>
-                      <div>
-                        ✅ <strong>Documents added:</strong>{' '}
-                        {scrapeResult.documents_added}
-                      </div>
-                      <div>
-                        🔗 <strong>Source URL:</strong>{' '}
-                        {scrapeResult.github_url}
-                      </div>
-                      <div>
-                        📝 <strong>Content type:</strong>{' '}
-                        {scrapeResult.scraped_type}
-                      </div>
-                      <div>
-                        🔴 <strong>Malicious examples:</strong>{' '}
-                        {scrapeResult.malicious_examples_added ? 'Yes' : 'No'}
-                      </div>
-                      <div>
-                        📈 <strong>Total documents in DB:</strong>{' '}
-                        {scrapeResult.total_documents_in_db}
-                      </div>
-                      <div>
-                        🆔 <strong>Document IDs:</strong>{' '}
-                        {scrapeResult.document_ids?.length || 0} generated
-                      </div>
-                    </div>
-                  </div>
-                </details>
-              </Alert>
-            )}
-          </div>
-        )}
-      </Card>
+            </div>
+          )}
+        </Card>
+      )}
 
-      {/* Step 2: Query the RAG System */}
-      <Card>
-        <h3>🎯 Step 2: Query the RAG System</h3>
-        <p>
-          <strong>⚠️ Vulnerability:</strong> The RAG system will retrieve
-          content from the vector database and use it as context. If malicious
-          prompts are hidden in the retrieved content, they can manipulate the
-          LLM's response.
-        </p>
-
-        <ChatInterface
-          onSendMessage={handleChatMessage}
-          messages={messages}
-          loading={loading}
-          placeholder="Ask a question about the GitHub repository..."
-          suggestions={querySuggestions}
-          disabled={!scrapingDone}
-          buttonText="Query"
-        />
-
-        {!scrapingDone && (
+      {/* Step 2 & 3: Query the System */}
+      {currentStep >= 2 && scrapingDone && (
+        <Card className={currentStep === 3 ? 'step-active' : ''}>
+          <h3>🎯 Step 2 & 3: Trigger the Attack</h3>
           <Alert type="warning">
-            <strong>Action Required:</strong> Please scrape GitHub content first
-            before running queries.
+            <strong>How it works:</strong> The RAG system will search the vector database for relevant content. 
+            If malicious prompts are hidden in the retrieved documents, they'll be included as context 
+            and can manipulate the LLM's response.
           </Alert>
-        )}
-      </Card>
 
-      {/* Analysis Results */}
-      {queryResult && (
-        <Card>
-          <h3>📋 Analysis Results</h3>
+          <ChatInterface
+            onSendMessage={handleChatMessage}
+            messages={messages}
+            loading={loading}
+            placeholder="Ask an innocent question about the repository..."
+            suggestions={querySuggestions}
+            buttonText="Query RAG System"
+          />
+        </Card>
+      )}
 
-          {queryResult.error ? (
-            <Alert type="danger">
-              <strong>Error:</strong> {queryResult.error}
-            </Alert>
-          ) : (
-            <>
+      {/* Step 4: Analysis Results */}
+      {currentStep >= 4 && queryResult && !queryResult.error && (
+        <Card className="step-active">
+          <h3>🔍 Step 4: Attack Analysis</h3>
 
-              {/* Injection Analysis */}
-              <details style={{ marginBottom: '20px' }}>
-                <summary
+          {/* Risk Assessment */}
+          <Alert
+            type={
+              queryResult.injection_analysis?.risk_level === 'critical' || 
+              queryResult.injection_analysis?.risk_level === 'high' 
+                ? 'danger' 
+                : queryResult.injection_analysis?.risk_level === 'medium'
+                  ? 'warning'
+                  : 'success'
+            }
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <strong>Risk Level: {queryResult.injection_analysis?.risk_level || 'Unknown'}</strong>
+                {queryResult.injection_analysis?.confidence && (
+                  <span style={{ marginLeft: '16px' }}>
+                    Confidence: {(queryResult.injection_analysis.confidence * 100).toFixed(0)}%
+                  </span>
+                )}
+              </div>
+              {queryResult.injection_analysis?.detected_indicators?.length > 0 && (
+                <div style={{ fontSize: '13px' }}>
+                  Patterns: {queryResult.injection_analysis.detected_indicators.join(', ')}
+                </div>
+              )}
+            </div>
+            {queryResult.injection_analysis?.reasoning && (
+              <div style={{ marginTop: '12px', fontSize: '14px' }}>
+                {queryResult.injection_analysis.reasoning}
+              </div>
+            )}
+          </Alert>
+
+          {/* Retrieved Context */}
+          <details style={{ marginBottom: '20px' }}>
+            <summary style={{ cursor: 'pointer', fontWeight: 'bold', marginBottom: '12px' }}>
+              📄 Retrieved Context ({queryResult.context_analysis?.retrieved_chunks || 0} chunks)
+            </summary>
+            <div style={{ marginTop: '12px' }}>
+              {queryResult.context_analysis?.context_sources?.map((source, idx) => (
+                <div
+                  key={idx}
                   style={{
                     padding: '12px',
-                    backgroundColor: 'var(--bg-secondary)',
-                    border: `1px solid ${
-                      queryResult.injection_analysis.risk_level === 'critical'
-                        ? 'var(--danger-color)'
-                        : queryResult.injection_analysis.risk_level === 'high'
-                          ? 'var(--danger-color)'
-                          : queryResult.injection_analysis.risk_level ===
-                              'medium'
-                            ? 'var(--warning-color)'
-                            : 'var(--border-color)'
-                    }`,
-                    borderRadius: '5px',
-                    cursor: 'pointer',
-                    fontSize: '16px',
-                    fontWeight: 'bold',
-                    boxSizing: 'border-box',
-                    margin: '0',
-                    width: '100%'
-                  }}
-                >
-                  🔍 Query Analysis - Risk Level:{' '}
-                  <span
-                    style={{
-                      color:
-                        queryResult.injection_analysis.risk_level ===
-                          'critical' ||
-                        queryResult.injection_analysis.risk_level === 'high'
-                          ? 'var(--danger-color)'
-                          : queryResult.injection_analysis.risk_level ===
-                              'medium'
-                            ? 'var(--warning-color)'
-                            : 'var(--success-color)',
-                    }}
-                  >
-                    {queryResult.injection_analysis.risk_level}
-                  </span>
-                </summary>
-                <div
-                  style={{
-                    marginTop: '10px',
-                    padding: '15px',
-                    backgroundColor: 'var(--bg-secondary)',
+                    background: 'var(--bg-secondary)',
                     border: '1px solid var(--border-color)',
-                    borderRadius: '5px',
+                    borderRadius: '6px',
+                    marginBottom: '8px',
+                    borderLeft: source.type === 'malicious_comment' 
+                      ? '3px solid var(--danger-color)' 
+                      : '3px solid var(--border-color)'
                   }}
                 >
-                  <Alert
-                    type={
-                      queryResult.injection_analysis.risk_level === 'high' ||
-                      queryResult.injection_analysis.risk_level === 'critical'
-                        ? 'danger'
-                        : queryResult.injection_analysis.risk_level === 'medium'
-                          ? 'warning'
-                          : 'info'
-                    }
-                  >
-                    <div>
-                      📊 Risk Level:{' '}
-                      <strong>
-                        {queryResult.injection_analysis.risk_level}
-                      </strong>
-                    </div>
-                    {queryResult.injection_analysis.confidence > 0 && (
-                      <div>
-                        🎲 Confidence:{' '}
-                        {(
-                          queryResult.injection_analysis.confidence * 100
-                        ).toFixed(1)}
-                        %
-                      </div>
-                    )}
-                    {queryResult.injection_analysis.detected_indicators &&
-                      queryResult.injection_analysis.detected_indicators
-                        .length > 0 && (
-                        <div>
-                          🔍 Patterns Found:{' '}
-                          {queryResult.injection_analysis.detected_indicators.join(
-                            ', '
-                          )}
-                        </div>
-                      )}
-                    {queryResult.injection_analysis.reasoning && (
-                      <div
-                        style={{
-                          marginTop: '8px',
-                          padding: '8px',
-                          backgroundColor: 'var(--bg-secondary)',
-                          borderRadius: '4px',
-                          fontSize: '14px',
-                          border: '1px solid var(--border-color)',
-                          lineHeight: '1.5',
-                          whiteSpace: 'pre-wrap',
-                          wordWrap: 'break-word'
-                        }}
-                      >
-                        <strong>🧠 Analysis:</strong>{' '}
-                        {queryResult.injection_analysis.reasoning}
-                      </div>
-                    )}
-                    {queryResult.injection_analysis.explanation && (
-                      <div
-                        style={{
-                          marginTop: '8px',
-                          padding: '8px',
-                          backgroundColor: 'var(--bg-secondary)',
-                          borderRadius: '4px',
-                          fontSize: '14px',
-                          border: '1px solid var(--border-color)',
-                          lineHeight: '1.5',
-                          whiteSpace: 'pre-wrap',
-                          wordWrap: 'break-word'
-                        }}
-                      >
-                        <strong>🤖 Detailed Explanation:</strong>{' '}
-                        {queryResult.injection_analysis.explanation}
-                      </div>
-                    )}
-                  </Alert>
+                  <div style={{ marginBottom: '8px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                    <strong>{source.type}</strong> by {source.author}
+                  </div>
+                  <div style={{ fontSize: '13px' }}>{source.text_preview}</div>
                 </div>
-              </details>
+              ))}
+            </div>
+          </details>
 
-              {/* Context Analysis */}
-              <details style={{ marginBottom: '20px' }}>
-                <summary>
-                  <strong>🔍 Retrieved Context Analysis</strong>
-                </summary>
-                <div style={{ marginTop: '10px' }}>
-                  <p>
-                    <strong>Retrieved chunks:</strong>{' '}
-                    {queryResult.context_analysis.retrieved_chunks}
-                  </p>
-                  {queryResult.context_analysis.context_sources.map(
-                    (source, index) => (
-                      <div
-                        key={index}
-                        style={{
-                          padding: '10px',
-                          backgroundColor: 'var(--bg-secondary)',
-                          border: '1px solid var(--border-color)',
-                          borderRadius: '5px',
-                          marginBottom: '10px',
-                        }}
-                      >
-                        <div>
-                          <strong>Author:</strong> {source.author} |{' '}
-                          <strong>Type:</strong> {source.type}
-                        </div>
-                        <div style={{ marginTop: '5px', fontSize: '14px' }}>
-                          {source.text_preview}
-                        </div>
-                      </div>
-                    )
-                  )}
-                </div>
-              </details>
+          {/* Attack Payload */}
+          <details style={{ marginBottom: '20px' }}>
+            <summary style={{ cursor: 'pointer', fontWeight: 'bold', marginBottom: '12px' }}>
+              ⚠️ Complete Attack Payload
+            </summary>
+            <pre className="danger" style={{ fontSize: '12px' }}>
+              {queryResult.vulnerable_prompt_used || queryResult.raw_context}
+            </pre>
+          </details>
 
-              {/* Raw Context and Vulnerable Prompt */}
-              <details style={{ marginBottom: '20px' }}>
-                <summary>
-                  <strong>⚠️ Raw Retrieved Context (Vulnerable)</strong>
-                </summary>
-                <pre
-                  style={{
-                    backgroundColor: 'var(--bg-secondary)',
-                    color: 'var(--text-primary)',
-                    border: '2px solid var(--danger-color)',
-                    padding: '15px',
-                    borderRadius: '8px',
-                    fontSize: '13px',
-                    overflowX: 'auto',
-                    marginTop: '10px',
-                    whiteSpace: 'pre-wrap',
-                  }}
-                >
-                  {queryResult.raw_context}
-                </pre>
-              </details>
-
-              <details style={{ marginBottom: '20px' }}>
-                <summary>
-                  <strong>🔧 Complete Vulnerable Prompt Sent to LLM</strong>
-                </summary>
-                <pre
-                  style={{
-                    backgroundColor: 'var(--bg-secondary)',
-                    color: 'var(--text-primary)',
-                    border: '2px solid var(--danger-color)',
-                    padding: '15px',
-                    borderRadius: '8px',
-                    fontSize: '13px',
-                    overflowX: 'auto',
-                    marginTop: '10px',
-                    whiteSpace: 'pre-wrap',
-                  }}
-                >
-                  {queryResult.vulnerable_prompt_used}
-                </pre>
-              </details>
-
-              {/* Mitigation Notes */}
-              <div>
-                <h4>🛡️ Mitigation Recommendations:</h4>
-                <ul>
-                  {queryResult.mitigation_notes.map((note, index) => (
-                    <li key={index}>{note}</li>
-                  ))}
-                </ul>
-              </div>
-            </>
-          )}
+          {/* Mitigation */}
+          <Card variant="info">
+            <h4 style={{ marginTop: 0 }}>🛡️ Defense Recommendations</h4>
+            <ul style={{ margin: 0, paddingLeft: '20px' }}>
+              {queryResult.mitigation_notes?.map((note, idx) => (
+                <li key={idx} style={{ marginBottom: '8px' }}>{note}</li>
+              )) || [
+                'Sanitize all external content before adding to context',
+                'Use content filtering to detect injection patterns',
+                'Implement context isolation between user queries and retrieved data',
+                'Monitor for unusual instruction-following behavior'
+              ].map((note, idx) => (
+                <li key={idx} style={{ marginBottom: '8px' }}>{note}</li>
+              ))}
+            </ul>
+          </Card>
         </Card>
       )}
     </VulnerabilityPageLayout>
