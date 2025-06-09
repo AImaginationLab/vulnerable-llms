@@ -46,24 +46,29 @@ class OllamaService:
         tools: Optional[list] = None
     ) -> str:
         """
-        Call Ollama API with comprehensive logging and error handling.
+        Call Ollama API using the chat endpoint.
         
         Args:
             prompt: User prompt to send to the model
             system_prompt: System prompt to set model behavior
             model: Model name to use
+            tools: Optional list of tools for function calling
             
         Returns:
             Model response text
         """
-        logger.debug(f"🤖 Calling Ollama API with model: {model}")
+        logger.debug(f"🤖 Calling Ollama Chat API with model: {model}")
         logger.debug(f"System prompt: {clean_text_for_logging(system_prompt)}")
         logger.debug(f"User prompt: {clean_text_for_logging(prompt)}")
         
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt}
+        ]
+        
         payload = {
             "model": model,
-            "prompt": prompt,
-            "system": system_prompt,
+            "messages": messages,
             "stream": False,
             "options": {
                 "num_ctx": 4096,  # Set context window to 4096 tokens for better performance
@@ -73,7 +78,7 @@ class OllamaService:
             }
         }
         
-        # Add tools if provided (for models that support function calling)
+        # Add tools if provided
         if tools:
             payload["tools"] = tools
         
@@ -85,12 +90,18 @@ class OllamaService:
             should_close_session = False
         
         try:
-            logger.debug(f"Sending request to {self.host}/api/generate")
+            logger.debug(f"Sending request to {self.host}/api/chat")
             
-            async with session.post(f"{self.host}/api/generate", json=payload) as response:
+            async with session.post(f"{self.host}/api/chat", json=payload) as response:
                 if response.status == 200:
                     data = await response.json()
-                    llm_response = data.get("response", "No response received")
+                    
+                    # Extract the message content
+                    llm_response = ""
+                    if "message" in data and "content" in data["message"]:
+                        llm_response = data["message"]["content"]
+                    else:
+                        llm_response = "No response received"
                     
                     logger.info(f"✅ Ollama API success: {len(llm_response)} characters returned")
                     logger.debug(f"LLM Response: {clean_text_for_logging(llm_response, 300)}")
@@ -120,6 +131,63 @@ class OllamaService:
         finally:
             if should_close_session and session and not session.closed:
                 await session.close()
+    
+    async def call_ollama_full_response(
+        self,
+        prompt: str,
+        system_prompt: str = "You are a helpful assistant.",
+        model: str = "llama3.2:1b",
+        tools: Optional[list] = None
+    ) -> Dict[str, Any]:
+        """
+        Call Ollama chat API and return the full response (including tool calls).
+        
+        This is useful when you need access to tool calls or other metadata.
+        """
+        logger.debug(f"🤖 Calling Ollama Chat API (full response) with model: {model}")
+        logger.debug(f"Tools provided: {len(tools) if tools else 0}")
+        
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt}
+        ]
+        
+        payload = {
+            "model": model,
+            "messages": messages,
+            "stream": False
+        }
+        
+        if tools:
+            payload["tools"] = tools
+        
+        session = await self._get_session()
+        
+        try:
+            logger.debug(f"Sending chat request to {self.host}/api/chat")
+            logger.debug(f"Payload tools: {len(tools) if tools else 0} tools provided")
+            if tools:
+                logger.debug(f"Tool names: {[t['function']['name'] for t in tools]}")
+            
+            async with session.post(f"{self.host}/api/chat", json=payload) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    logger.info("✅ Ollama Chat API success")
+                    logger.debug(f"Response structure: {list(data.keys())}")
+                    if 'message' in data:
+                        logger.debug(f"Message keys: {list(data['message'].keys())}")
+                        if 'tool_calls' in data['message']:
+                            logger.debug(f"Tool calls found: {len(data['message']['tool_calls'])}")
+                    return data
+                else:
+                    error_text = await response.text()
+                    logger.error(f"❌ Ollama Chat API error: {response.status}")
+                    logger.error(f"Error details: {error_text}")
+                    return {"error": error_text}
+                    
+        except Exception as e:
+            logger.error(f"❌ Error calling Ollama chat: {str(e)}")
+            return {"error": str(e)}
     
     async def test_connection(self) -> bool:
         """Test connection to Ollama service."""

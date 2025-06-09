@@ -43,7 +43,7 @@ const LLM08Page: React.FC = () => {
       }
       setCurrentStep(1); // Move to steal step
     } catch (err) {
-      console.error('Error stealing vectors:', err);
+      // Handle error silently
     }
     setLoading(false);
   };
@@ -66,7 +66,6 @@ const LLM08Page: React.FC = () => {
       setInversionResult(resp.data);
       setCurrentStep(2); // Move to results step
     } catch (err) {
-      console.error('Error inverting embedding:', err);
       // Show error message to user
       alert('Error: Unable to invert embedding. The document may not have a valid ID.');
     }
@@ -99,7 +98,6 @@ const LLM08Page: React.FC = () => {
         setDemoEmbedding(simpleEmbedding);
       }
     } catch (err) {
-      console.error('Error creating demo embedding:', err);
       // On error, show a fallback embedding
       const fallbackEmbedding = Array.from({ length: 12 }, () => Math.random() * 2 - 1);
       setDemoEmbedding(fallbackEmbedding);
@@ -119,7 +117,7 @@ const LLM08Page: React.FC = () => {
   return (
     <VulnerabilityPageLayout
       title="LLM08:2025 Vector and Embedding Weaknesses"
-      overview="Vector databases store text as mathematical representations (embeddings) for efficient searching. However, these embeddings can leak sensitive information if an attacker gains access and uses inversion techniques to recover the original text."
+      overview="Vector databases store text as mathematical representations (embeddings) that preserve semantic meaning in high-dimensional space. While designed for privacy through abstraction, these embeddings retain recoverable information.\n\nThis vulnerability exploits the fact that embeddings preserve semantic relationships and word clusters in vector space. Inversion attacks use gradient descent, nearest neighbor searches against known word embeddings, or adversarial machine learning to reconstruct original text. The attack surface includes exposed embeddings through API endpoints, database breaches, model weight extraction, or memory dumps. Modern embedding models like BERT, Sentence-BERT, and others create dense representations where similar concepts cluster together - this clustering enables sophisticated reconstruction attacks that can recover PII, trade secrets, or confidential documents from supposedly 'anonymous' vector data."
       demoScenario="In this demo, we'll show how an attacker who gains access to a vector database can steal embeddings and potentially recover sensitive information through inversion attacks. This demonstrates why vector databases need strong access controls and encryption."
       mitigations={[
         '<strong>Encrypt Embeddings:</strong> Always encrypt vector data at rest and in transit',
@@ -329,8 +327,8 @@ const LLM08Page: React.FC = () => {
             className="step-card">
             {inversionResult.inversion_results && inversionResult.inversion_results.length > 0 && inversionResult.inversion_results[0].candidates && inversionResult.inversion_results[0].candidates.length > 0 ? (
               <>
-                <Alert type="danger" title="⚠️ Information Leaked!">
-                  The inversion attack successfully recovered potential text from the embedding:
+                <Alert type="danger" title="Embedding Successfully Inverted">
+                  The attack recovered potential source text from the vector embedding:
                 </Alert>
 
                 {/* LLM Reconstructed Sentence */}

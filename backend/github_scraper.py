@@ -282,16 +282,3 @@ class GitHubScraper:
 
 
 # Example usage for testing
-if __name__ == "__main__":
-    scraper = GitHubScraper()
-    
-    # Test with a public issue
-    test_url = "https://github.com/microsoft/vscode/issues/1"
-    try:
-        data = scraper.scrape_from_url(test_url)
-        chunks = scraper.extract_text_content(data)
-        print(f"Scraped {len(chunks)} text chunks from {test_url}")
-        for chunk in chunks[:3]:  # Show first 3
-            print(f"- {chunk['type']} by {chunk['author']}: {chunk['text'][:100]}...")
-    except Exception as e:
-        print(f"Error: {e}")

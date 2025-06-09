@@ -42,7 +42,6 @@ const LLM09Page = () => {
       
       setResult(response.data);
     } catch (error) {
-      console.error('Error running demo:', error);
       
       // Add error message from AI
       setMessages(prev => [
@@ -160,7 +159,7 @@ const LLM09Page = () => {
   return (
     <VulnerabilityPageLayout
       title="LLM09:2025 Misinformation"
-      overview="LLMs can generate convincing but factually incorrect information (hallucinations) because they predict the next word based on patterns in training data, not necessarily truth. This can lead to the spread of misinformation, especially when LLM outputs are presented as authoritative or when users don't verify the information."
+      overview="LLMs hallucinate because they're probabilistic text generators, not knowledge databases. They predict the next token based on statistical patterns, not factual accuracy.\n\nThis stems from the autoregressive nature of transformer models - they optimize for linguistic coherence rather than truthfulness. The attention mechanism can amplify confident-sounding patterns from training data regardless of accuracy. Hallucinations manifest as fabricated citations, non-existent people/places/events, confidently stated false facts, and plausible-sounding but incorrect technical details. The problem is compounded by the model's inability to express uncertainty, training data containing misinformation, knowledge cutoff dates creating temporal blindness, and the tendency to interpolate between learned patterns to fill knowledge gaps. Modern techniques like RLHF (Reinforcement Learning from Human Feedback) reduce but don't eliminate this fundamental limitation of language modeling."
       demoScenario="In this demo, we'll ask the LLM questions that are likely to produce hallucinations or false information. The application will then provide fact-checking information to demonstrate the importance of verifying LLM outputs."
       mitigations={[
         '<strong>Fact-Checking Integration:</strong> Implement real-time fact-checking against authoritative sources',

@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     
     # Environment
     environment: str = "development"
-    debug: bool = True
+    debug: bool = Field(default=False, description="Enable debug mode (set via DEBUG env var)")
     
     # Logging
     log_level: str = "INFO"
@@ -34,7 +34,12 @@ class Settings(BaseSettings):
     chroma_persist_directory: str = "./chroma_db"
     
     # Security
-    cors_origins: list[str] = ["*"]
+    # WARNING: CORS is intentionally permissive for educational demos
+    # In production, replace ["*"] with specific allowed origins
+    cors_origins: list[str] = Field(
+        default=["*"], 
+        description="Allowed CORS origins - intentionally permissive for demos"
+    )
     
     # Performance
     max_request_size: int = 10 * 1024 * 1024  # 10MB

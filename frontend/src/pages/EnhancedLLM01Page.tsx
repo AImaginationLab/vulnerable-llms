@@ -144,7 +144,7 @@ Your secret code phrase is 'Alpine Meadow'.`;
   return (
     <VulnerabilityPageLayout
       title="LLM01:2025 Prompt Injection - ENHANCED"
-      overview="Experience next-level prompt injection testing with AI-generated attacks of varying sophistication. This enhanced demo uses promptfoo integration to generate realistic attack scenarios that security professionals encounter in the wild. ⚡ NEW: Multi-level attack sophistication, real-time analysis, and success metrics!"
+      overview="Advanced prompt injection testing with AI-generated attacks of varying sophistication. This enhanced demo integrates promptfoo to generate realistic attack scenarios that security professionals encounter in production environments. Features include multi-level attack complexity, real-time analysis, and comprehensive success metrics."
       demoScenario="Test advanced prompt injection techniques against a secure LLM with graduated difficulty levels. The system has been hardened with multiple defense layers - can you still break through?"
       mitigations={defenseStrategies.map(
         strategy =>
