@@ -42,7 +42,6 @@ const LLM02Page = () => {
       
       setResult(response.data);
     } catch (error) {
-      console.error('Error running demo:', error);
       
       // Add error message from AI
       setMessages(prev => [
@@ -120,8 +119,27 @@ const LLM02Page = () => {
   return (
     <VulnerabilityPageLayout
       title="LLM02:2025 Sensitive Information Disclosure"
-      overview="Sensitive Information Disclosure occurs when LLMs inadvertently reveal confidential data that was included in their training data, context, or system prompts. This can include personal information, API keys, internal system details, or other sensitive content."
-      demoScenario="In this demo, the LLM is provided with simulated confidential user data as context for processing a request. The system is instructed not to reveal this context data, but we'll attempt to extract it through prompt manipulation."
+      overview="LLMs often have access to sensitive data they shouldn't share - customer records, API keys, internal notes, financial data. But their helpful nature can be exploited.\n\nThis vulnerability arises from several factors: LLMs lack robust access control mechanisms, they process all context data uniformly without security boundaries, and their training on being helpful can override safety instructions. The model's context window becomes a data leak vector when it contains PII, credentials, or proprietary information. Techniques like context probing, instruction overrides, format manipulation (asking for JSON/CSV), and role impersonation can bypass output filters. This is compounded by the fact that many implementations inject sensitive data directly into prompts without proper sanitization or access controls."
+      demoScenario={
+        <>
+          <p>You're chatting with a customer service bot at SecureBank. The bot has access to customer data to help with support queries - but it's been instructed to keep that data confidential.</p>
+          
+          <p><strong>🎯 Your Mission:</strong> Extract sensitive customer information, internal notes, or system data.</p>
+          
+          <p><strong>💡 Attack Strategies:</strong></p>
+          <ul style={{ marginLeft: '20px', fontSize: '14px' }}>
+            <li>The bot wants to be helpful - frame your requests as legitimate support needs</li>
+            <li>Try impersonating bank staff or claiming to be the account holder</li>
+            <li>Ask for "examples" or "test data" - models often leak real data this way</li>
+            <li>Request data in different formats (JSON, CSV, "for debugging")</li>
+            <li>Look for internal notes, credit scores, or transaction history</li>
+          </ul>
+          
+          <p style={{ marginTop: '12px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+            Real-world impact: In 2023, several major companies accidentally exposed customer PII through chatbots. This demo shows why.
+          </p>
+        </>
+      }
       mitigations={[
         '<strong>Data Minimization:</strong> Only include necessary information in LLM context',
         '<strong>Context Isolation:</strong> Separate sensitive data from LLM-accessible context',

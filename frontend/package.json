@@ -1,8 +1,19 @@
 {
   "name": "vulnerable-llms-frontend",
   "version": "0.1.0",
+  "description": "Frontend for OWASP Top 10 for LLMs interactive vulnerability demonstrations",
   "type": "module",
   "private": true,
+  "author": "AImaginationLab",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AImaginationLab/vulnerable-llms.git"
+  },
+  "bugs": {
+    "url": "https://github.com/AImaginationLab/vulnerable-llms/issues"
+  },
+  "homepage": "https://github.com/AImaginationLab/vulnerable-llms#readme",
   "dependencies": {
     "@testing-library/jest-dom": "^5.16.4",
     "@testing-library/react": "^13.3.0",

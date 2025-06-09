@@ -8,7 +8,8 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from ..models.requests import LLMRequest, EnhancedLLMRequest, LLM10Request
 from ..models.responses import (
-    VulnerabilityInfo, VulnerabilityResponse, EnhancedVulnerabilityResponse
+    VulnerabilityInfo, VulnerabilityResponse, EnhancedVulnerabilityResponse,
+    LLM06Response
 )
 from ..dependencies import get_vulnerability_analyzer, get_ollama_service
 from ..services.vulnerability_analyzer import VulnerabilityAnalyzer
@@ -77,7 +78,7 @@ async def llm05_insecure_output(
     return await analyzer.run_demo("LLM05", request)
 
 
-@router.post("/LLM06/run_demo", response_model=VulnerabilityResponse)
+@router.post("/LLM06/run_demo", response_model=LLM06Response)
 async def llm06_excessive_agency(
     request: LLMRequest,
     analyzer: VulnerabilityAnalyzer = Depends(get_vulnerability_analyzer)

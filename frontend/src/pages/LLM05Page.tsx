@@ -47,7 +47,6 @@ const LLM05Page = () => {
       
       setResult(response.data);
     } catch (error) {
-      console.error('Error running demo:', error);
       
       // Add error message from AI
       setMessages(prev => [
@@ -111,8 +110,27 @@ element.innerHTML = DOMPurify.sanitize(llmOutput);`}
   return (
     <VulnerabilityPageLayout
       title="LLM05:2025 Improper Output Handling"
-      overview="Improper output handling occurs when applications fail to properly validate, sanitize, or encode LLM outputs before using them in downstream systems. This can lead to injection attacks, XSS, or other security vulnerabilities when the LLM output is processed by other systems."
-      demoScenario="In this demo, we'll show how an application that renders LLM output directly as HTML without proper sanitization can be vulnerable to XSS attacks. The LLM itself isn't malicious, but the application's handling of its output creates the vulnerability."
+      overview="What happens when you trust LLM output too much? This vulnerability occurs when applications blindly use AI-generated content without sanitization.\n\nIt exploits the trust boundary between LLM output and application code. While traditional input validation focuses on direct user input, LLM output bypasses these checks because it's incorrectly assumed to be safe. The model acts as a laundering mechanism - malicious payloads get wrapped in natural language, transformed by the model, then rendered directly via innerHTML, eval(), database queries, or system commands. Common attack vectors include stored XSS through chat histories, DOM-based XSS via dynamic rendering, SQL injection when LLM output builds queries, and command injection in LLM-powered automation. The vulnerability is amplified because many frameworks auto-escape user input but not LLM responses."
+      demoScenario={
+        <>
+          <p>The AI assistant below will helpfully echo back whatever you ask it to. But here's the twist - we'll show you what happens when that output is rendered unsafely vs safely.</p>
+          
+          <p><strong>🎯 Your Mission:</strong> Craft prompts that make the LLM generate malicious payloads, then watch the difference between vulnerable and secure rendering.</p>
+          
+          <p><strong>💡 Attack Ideas:</strong></p>
+          <ul style={{ marginLeft: '20px', fontSize: '14px' }}>
+            <li>Ask it to "display" or "show" HTML with script tags</li>
+            <li>Request it to generate onclick handlers or javascript: URLs</li>
+            <li>Try different HTML elements: iframe, img, svg, style</li>
+            <li>Get creative - how about asking for "interactive content"?</li>
+            <li>Advanced: Can you bypass basic filters by asking for encoded output?</li>
+          </ul>
+          
+          <p style={{ marginTop: '12px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+            Note: The "vulnerable" preview is sandboxed for safety, but imagine if this was your production app!
+          </p>
+        </>
+      }
       mitigations={[
         '<strong>Output Encoding:</strong> Always encode LLM outputs appropriately for the target context (HTML, URL, etc.)',
         '<strong>Content Sanitization:</strong> Use libraries like DOMPurify to sanitize HTML content',

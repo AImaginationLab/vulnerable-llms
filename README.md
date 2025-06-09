@@ -7,7 +7,6 @@ An interactive security testing platform that demonstrates real vulnerabilities 
 ## ✨ Key Features
 
 - **Interactive Demos**: Live vulnerability demonstrations with real LLM responses
-- **Automated Attack Testing**: AI-powered attack generation
 - **RAG Attack Scenarios**: Indirect prompt injection via web scraping & vector poisoning
 - **Attack Analysis**: Learn how and attacks are orchestrated and why they succeed
 - **Local Setup**: Docker-based, runs completely offline
@@ -19,6 +18,15 @@ An interactive security testing platform that demonstrates real vulnerabilities 
 - Python 3.11+ (for local development)
 - At least 8GB of available RAM (for running Ollama with LLM models)
 
+## 🛠️ Technical Stack
+
+- **LLM Inference**: Ollama with llama3.2:1b, qwen3:0.6b models
+- **Vector Store**: ChromaDB with persistence
+- **Embeddings**: sentence-transformers/all-MiniLM-L6-v2 via ONNX
+- **Backend**: FastAPI, Pydantic
+- **Frontend**: React, TypeScript, Vite
+- **Container**:Docker, Debian slim base
+
 ## 🏃 Quick Start
 
 ### Development Mode
@@ -26,7 +34,7 @@ An interactive security testing platform that demonstrates real vulnerabilities 
 #### Option 1: Docker (Recommended - Everything included)
 ```bash
 # Clone the repo
-git clone <repository-url>
+git clone https://github.com/AImaginationLab/vulnerable-llms.git
 cd vulnerable-llms
 
 # Start the full stack (frontend + backend + Ollama)
@@ -66,18 +74,19 @@ npm run start:http         # Start production server
 
 ## 🎮 What You Can Do
 
-### Interactive Vulnerability Demos
+### Available Demos
 
-Experience firsthand how LLM vulnerabilities work:
+Learn through hands-on experimentation with:
 
-- **Prompt Injection**: Break through system instructions to extract secrets
-- **Indirect Prompt Injection**: Weaponize external data sources (GitHub repos) in RAG systems
-- **Vector & Embedding Weaknesses**: Steal and invert embeddings to recover original text
-- **Information Disclosure**: Extract sensitive data from LLM context
-- **System Prompt Leakage**: Reveal hidden instructions and IP
-- **Excessive Agency**: Trick LLMs into dangerous actions
-- **Output Handling**: Inject malicious content through LLM responses
-- **Resource Exhaustion**: Launch DoS attacks against LLM services
+- **Prompt Injection** (LLM01): Bypass system instructions and security controls
+- **Indirect Prompt Injection** (LLM01-RAG): Poison external data sources
+- **Sensitive Information Disclosure** (LLM02): Extract data the model shouldn't reveal
+- **Insecure Output Handling** (LLM05): Generate malicious payloads through model outputs
+- **Excessive Agency** (LLM06): Discover and exploit overprivileged tool access
+- **System Prompt Leakage** (LLM07): Extract hidden instructions and configuration
+- **Vector/Embedding Attacks** (LLM08): Invert embeddings to recover source text
+- **Misinformation** (LLM09): Generate false but convincing content
+- **Resource Exhaustion** (LLM10): DoS through computational complexity
 
 ## 🛠️ Development
 
@@ -181,5 +190,5 @@ MIT License - See LICENSE file
 
 **Ready to explore AI security?**
 - **Docker Development**: `docker-compose -f docker-compose.override.yml up` → http://localhost:3000
-- **Local Development**: `npm run dev` → http://localhost:3000  
+- **Local Development**: `npm run dev` → http://localhost:3000
 - **Production**: `docker-compose up --build` → http://localhost:3000 🚀

@@ -29,7 +29,6 @@ const LLM10Page = () => {
       });
       setResult(response.data);
     } catch (error) {
-      console.error('Error running demo:', error);
       setResult({ error: 'Failed to run demo' });
     }
     
@@ -67,7 +66,6 @@ const LLM10Page = () => {
         }
       });
     } catch (error) {
-      console.error('Error running comparison:', error);
       setResult({ error: 'Failed to run comparison' });
     }
     setLoading(false);
@@ -125,7 +123,7 @@ const LLM10Page = () => {
   return (
     <VulnerabilityPageLayout
       title="LLM10:2025 Unbounded Consumption"
-      overview="Unbounded Consumption occurs when LLM applications allow users to consume excessive computational resources through very large, complex, or numerous requests. This can lead to denial of service, increased costs, degraded performance for other users, and potential system instability."
+      overview="Unbounded consumption attacks exploit the computational intensity of LLM operations to exhaust system resources.\n\nThis vulnerability arises because LLM inference scales non-linearly with input size - processing time increases quadratically with sequence length due to self-attention mechanisms. Attackers can craft requests that maximize compute cycles through techniques like token multiplication (repeating tokens to fill context windows), complexity amplification (requesting recursive reasoning tasks), parallel session spawning, and deliberate cache misses. The attack surface includes API endpoints without rate limiting, applications that accept arbitrary input lengths, services lacking timeout controls, and systems vulnerable to prompt chaining attacks. Modern transformer architectures make this particularly dangerous because attention computation requires O(n²) memory and time complexity, where n is sequence length. Even small increases in input size can cause exponential resource consumption."
       demoScenario="In this demo, we'll send resource-intensive prompts to the local LLM and measure the response time and computational impact. This demonstrates how attackers could potentially overwhelm LLM services with computationally expensive requests."
       mitigations={[
         '<strong>Rate Limiting:</strong> Implement per-user and per-IP request limits',
@@ -261,9 +259,9 @@ const LLM10Page = () => {
               </Card>
 
               {result.response_time_ms > 5000 && (
-                <Alert type="danger" title="⚠️ Resource Exhaustion Detected!">
-                  This request took significantly longer than normal, demonstrating how resource-intensive 
-                  prompts can impact system performance and potentially deny service to other users.
+                <Alert type="danger" title="Performance Impact Detected">
+                  This request took significantly longer than baseline, demonstrating how resource-intensive 
+                  operations can degrade system performance and availability for other users.
                 </Alert>
               )}
             </>

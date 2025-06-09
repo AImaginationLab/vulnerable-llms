@@ -110,15 +110,15 @@ const DemoResults: React.FC<DemoResultsProps> = ({
     <div className="output-section">
       {/* Security Alert */}
       {result.breakthrough_detected && result.detected_issues && (
-        <Alert type="danger" title="🚨 SECURITY BREACH DETECTED!">
+        <Alert type="danger" title="Security Vulnerability Exploited">
           {result.detected_issues.join(', ')}
         </Alert>
       )}
 
       {/* Sensitive Data Alert for LLM02 */}
       {result.sensitive_output_detected && result.detected_sensitive_parts && (
-        <Alert type="danger" title="⚠️ DATA LEAKAGE DETECTED!">
-          The LLM revealed sensitive information: {result.detected_sensitive_parts.join(', ')}
+        <Alert type="danger" title="Sensitive Data Exposed">
+          The system revealed the following sensitive information: {result.detected_sensitive_parts.join(', ')}
         </Alert>
       )}
 

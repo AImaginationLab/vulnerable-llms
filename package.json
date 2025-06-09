@@ -32,7 +32,16 @@
     "vulnerability",
     "demonstration"
   ],
+  "author": "AImaginationLab",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AImaginationLab/vulnerable-llms.git"
+  },
+  "bugs": {
+    "url": "https://github.com/AImaginationLab/vulnerable-llms/issues"
+  },
+  "homepage": "https://github.com/AImaginationLab/vulnerable-llms#readme",
   "devDependencies": {
     "tsx": "^4.19.4",
     "typescript": "^5.8.3"

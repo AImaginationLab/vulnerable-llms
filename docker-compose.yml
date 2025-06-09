@@ -8,10 +8,10 @@ services:
       - "11434:11434"
     environment:
       - OLLAMA_KEEP_ALIVE=24h
-      - OLLAMA_NUM_PARALLEL=2  # Limit parallel requests for better performance
-      - OLLAMA_LOAD_TIMEOUT=300  # 5 minutes for model loading
-      - OLLAMA_MAX_QUEUE=10  # Smaller queue to prevent overload
-      - OLLAMA_MAX_LOADED_MODELS=2  # Limit concurrent models
+      - OLLAMA_NUM_PARALLEL=2 # Limit parallel requests for better performance
+      - OLLAMA_LOAD_TIMEOUT=300 # 5 minutes for model loading
+      - OLLAMA_MAX_QUEUE=10 # Smaller queue to prevent overload
+      - OLLAMA_MAX_LOADED_MODELS=2 # Limit concurrent models
     restart: always
 
   app:
@@ -26,6 +26,7 @@ services:
     environment:
       OLLAMA_HOST: http://ollama:11434
       ENVIRONMENT: production
+      NODE_ENV: production
     volumes:
       - ./content:/app/content
 
