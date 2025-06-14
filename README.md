@@ -8,7 +8,7 @@ An interactive security testing platform that demonstrates real vulnerabilities 
 
 - **Interactive Demos**: Live vulnerability demonstrations with real LLM responses
 - **RAG Attack Scenarios**: Indirect prompt injection via web scraping & vector poisoning
-- **Attack Analysis**: Learn how and attacks are orchestrated and why they succeed
+- **Attack Analysis**: Learn how attacks are orchestrated and why they succeed
 - **Local Setup**: Docker-based, runs completely offline
 
 ## Prerequisites
@@ -25,7 +25,7 @@ An interactive security testing platform that demonstrates real vulnerabilities 
 - **Embeddings**: sentence-transformers/all-MiniLM-L6-v2 via ONNX
 - **Backend**: FastAPI, Pydantic
 - **Frontend**: React, TypeScript, Vite
-- **Container**:Docker, Debian slim base
+- **Container**: Docker, Debian slim base
 
 ## 🏃 Quick Start
 

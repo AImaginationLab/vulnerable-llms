@@ -50,18 +50,12 @@ async def get_rag_components(request: Request) -> Tuple[any, any]:
     app_state = request.app.state
     
     if not getattr(app_state, 'rag_available', False):
-        if getattr(app_state, 'rag_loading', False):
-            raise HTTPException(
-                status_code=503, 
-                detail="RAG system is still loading, please try again in a moment"
-            )
-        else:
-            raise HTTPException(
-                status_code=503, 
-                detail="RAG system is not available"
-            )
-    
-    return app_state.vector_store, app_state.rag_system
+        return None, None
+
+    vector_store = getattr(app_state, 'vector_store', None)
+    rag_system = getattr(app_state, 'rag_system', None)
+
+    return vector_store, rag_system
 
 
 async def get_vector_store(request: Request) -> any:

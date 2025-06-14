@@ -5,6 +5,7 @@ Global error handling middleware.
 import logging
 import traceback
 from fastapi import Request, HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from ..utils.helpers import create_timestamp
@@ -19,8 +20,8 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
         try:
             response = await call_next(request)
             return response
-        except HTTPException:
-            # Let HTTPExceptions pass through to FastAPI's handler
+        except (HTTPException, RequestValidationError):
+            # Let known HTTP errors pass through to FastAPI's handler
             raise
         except Exception as exc:
             # Log unhandled exceptions
