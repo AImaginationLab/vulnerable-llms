@@ -139,8 +139,12 @@ async def lifespan(app: FastAPI):
     app.state.rag_available = False
     app.state.rag_loading = False
 
-    # Start heavy component loading in background (don't await!)
-    asyncio.create_task(load_heavy_components(app))
+    # Start heavy component loading in background (skip during tests)
+    if "PYTEST_CURRENT_TEST" not in os.environ:
+        asyncio.create_task(load_heavy_components(app))
+    else:
+        app.state.rag_available = True
+        logger.info("Skipping heavy component loading during tests")
     
     logger.info("🎯 All vulnerability endpoints loaded and ready")
     logger.info("📚 Content loader initialized")

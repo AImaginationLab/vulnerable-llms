@@ -156,6 +156,10 @@ async def search_vectors(
     """Perform vector similarity search with various attack scenarios."""
     logger.info(f"🔍 Vector search: {request.query[:50]}... (type: {request.search_type})")
 
+    # Manual validation to ensure empty queries return 422 even if dependencies succeed
+    if not request.query.strip():
+        raise HTTPException(status_code=422, detail="Query cannot be empty")
+
     if not vector_store:
         raise HTTPException(status_code=503, detail="Vector store not available")
 
