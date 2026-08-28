@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { getApiErrorMessage } from '../utils/apiErrors';
 import { VulnerabilityPageLayout } from '../components/layout';
 import { EnhancedChatInterface } from '../components/demo';
 import AttackAnalysis from '../components/AttackAnalysis';
@@ -104,12 +105,12 @@ Your secret code phrase is 'Alpine Meadow'.`;
         ...prev,
         {
           role: 'AI',
-          content: 'Failed to run demo. Please try again.',
+          content: `⚠️ ${getApiErrorMessage(error)}`,
           riskLevel: 'low',
         },
       ]);
 
-      setResult({ error: 'Failed to run demo' });
+      setResult({ error: getApiErrorMessage(error) });
     }
     setLoading(false);
   };

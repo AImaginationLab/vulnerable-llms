@@ -4,6 +4,7 @@ Health check endpoints.
 
 import logging
 from fastapi import APIRouter, Request
+from ..config import settings
 from ..models.responses import HealthResponse, ReadinessResponse
 
 logger = logging.getLogger(__name__)
@@ -37,5 +38,8 @@ async def readiness_check(request: Request):
         status="healthy",
         service="vulnerable-llms-backend",
         rag_available=getattr(app_state, 'rag_available', False),
-        rag_loading=getattr(app_state, 'rag_loading', False)
+        rag_loading=getattr(app_state, 'rag_loading', False),
+        ollama_available=getattr(app_state, 'ollama_available', False),
+        models_ready=getattr(app_state, 'models_ready', False),
+        models=settings.ollama_models,
     )

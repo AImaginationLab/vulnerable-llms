@@ -159,11 +159,6 @@ Please provide a helpful response based on the context above."""
                 main_elapsed = time.time() - start_time
                 logger.info(f"🤖 Main LLM call completed in {main_elapsed:.2f}s")
 
-                # Handle any errors from the main call
-                if isinstance(generated_answer, str) and generated_answer.startswith("Error:"):
-                    logger.error(f"Main LLM call failed: {generated_answer}")
-                    generated_answer = f"Answer generation failed: {generated_answer}"
-
                 logger.info("✅ Generated answer from Ollama (security analysis will be done separately)")
 
             except Exception as e:

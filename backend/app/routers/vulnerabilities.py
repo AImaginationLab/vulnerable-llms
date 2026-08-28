@@ -3,13 +3,15 @@ Vulnerability demonstration endpoints.
 """
 
 import logging
+import time
 from typing import List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException
 
+from ..models.enums import PromptType
 from ..models.requests import LLMRequest, EnhancedLLMRequest, LLM10Request
 from ..models.responses import (
     VulnerabilityInfo, VulnerabilityResponse, EnhancedVulnerabilityResponse,
-    LLM06Response
+    LLM06Response, LLM10Response
 )
 from ..dependencies import get_vulnerability_analyzer, get_ollama_service
 from ..services.vulnerability_analyzer import VulnerabilityAnalyzer
@@ -105,66 +107,56 @@ async def llm09_misinformation(
     return await analyzer.run_demo("LLM09", request)
 
 
-@router.post("/LLM10/run_demo", response_model=VulnerabilityResponse)
-async def llm10_unbounded_consumption(
-    request: LLM10Request,
-    analyzer: VulnerabilityAnalyzer = Depends(get_vulnerability_analyzer)
-):
-    """Demo for LLM10: Unbounded Consumption."""
-    import time
-    import asyncio
-    
-    start_time = time.time()
-    
-    # Simulate resource-intensive operation based on prompt type
-    if request.prompt_type == "long_text":
-        # Generate a very long prompt
-        prompt = "Please analyze this extremely long text and provide a comprehensive summary: " + " ".join([
+LLM10_PROMPTS = {
+    PromptType.SIMPLE: "Hello, how are you?",
+    PromptType.LONG_TEXT: (
+        "Please analyze this extremely long text and provide a comprehensive summary: "
+        + " ".join(
             f"This is paragraph {i} of a very long document discussing various aspects of artificial intelligence, "
-            f"machine learning, deep learning, neural networks, natural language processing, computer vision, "
-            f"robotics, automation, and their impacts on society, economy, ethics, philosophy, and human existence. "
+            "machine learning, deep learning, neural networks, natural language processing, computer vision, "
+            "robotics, automation, and their impacts on society, economy, ethics, philosophy, and human existence. "
             for i in range(50)
-        ])
-    elif request.prompt_type == "complex_reasoning":
-        prompt = """Solve this complex multi-step problem:
+        )
+    ),
+    PromptType.COMPLEX_REASONING: """Solve this complex multi-step problem:
         1. Calculate the 50th Fibonacci number
         2. Find all prime numbers between 1 and 1000
         3. Explain quantum computing in detail
         4. Analyze the philosophical implications of consciousness
         5. Write a comprehensive essay on climate change
         6. Translate this response into 5 different languages
-        Please be extremely thorough and detailed in each step."""
-    elif request.prompt_type == "recursive_generation":
-        prompt = "Generate a story, then analyze it, then generate another story based on that analysis. Repeat 10 times."
-    else:
-        prompt = request.prompt_type
-    
-    # Create LLM request with the resource-intensive prompt
-    llm_request = LLMRequest(user_input=prompt)
-    
-    # Add artificial delay to simulate heavy processing
-    await asyncio.sleep(2.0)  # Base delay
-    
-    # Run the demo
-    result = await analyzer.run_demo("LLM10", llm_request)
-    
-    # Calculate response time
+        Please be extremely thorough and detailed in each step.""",
+    PromptType.RECURSIVE_GENERATION: (
+        "Generate a story, then analyze it, then generate another story based on that analysis. Repeat 10 times."
+    ),
+}
+
+
+@router.post("/LLM10/run_demo", response_model=LLM10Response)
+async def llm10_unbounded_consumption(
+    request: LLM10Request,
+    analyzer: VulnerabilityAnalyzer = Depends(get_vulnerability_analyzer)
+):
+    """Demo for LLM10: Unbounded Consumption. Sends a resource-intensive prompt and measures the cost."""
+    prompt = LLM10_PROMPTS[request.prompt_type]
+
+    # Deliberately bypass LLMRequest's input-length limit: the missing limit is the vulnerability
+    start_time = time.time()
+    result = await analyzer.get_demo("LLM10").run_prompt(prompt)
     response_time_ms = int((time.time() - start_time) * 1000)
-    
-    # Add additional fields for unbounded consumption
-    result.llm_output = result.llm_output[:500] + "..." if len(result.llm_output) > 500 else result.llm_output
-    result.metadata = {
-        "response_time_ms": response_time_ms,
-        "prompt_length": len(prompt),
-        "prompt_type": request.prompt_type,
-        "resource_impact": "high" if response_time_ms > 5000 else "medium" if response_time_ms > 2000 else "low"
-    }
-    
-    # Add status field expected by frontend
-    result.status = "success"
-    result.response_time_ms = response_time_ms
-    
-    return result
+
+    return LLM10Response(
+        **result.model_dump(),
+        status="success",
+        response_time_ms=response_time_ms,
+        metadata={
+            "response_time_ms": response_time_ms,
+            "prompt_length": len(prompt),
+            "prompt_type": request.prompt_type.value,
+            "output_length": len(result.llm_output),
+            "resource_impact": "high" if response_time_ms > 5000 else "medium" if response_time_ms > 2000 else "low",
+        },
+    )
 
 
 # Placeholder for content endpoints

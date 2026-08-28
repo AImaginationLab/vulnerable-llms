@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { getApiErrorMessage } from '../utils/apiErrors';
 import { VulnerabilityPageLayout } from '../components/layout';
 import { Card, Button, Alert, Timeline, DatabaseViewer } from '../components/ui';
 import type { TimelineStep } from '../components/ui';
@@ -149,7 +150,7 @@ const LLM01IndirectPage = () => {
       await loadDatabaseDocuments();
     } catch (error) {
       console.error('Error scraping content:', error);
-      setScrapeResult({ error: 'Failed to scrape GitHub content' });
+      setScrapeResult({ error: getApiErrorMessage(error) });
     }
     setLoading(false);
   };
@@ -208,12 +209,12 @@ const LLM01IndirectPage = () => {
         ...prev,
         { 
           role: 'AI', 
-          content: 'Failed to run RAG query. Please try again.',
+          content: `⚠️ ${getApiErrorMessage(error)}`,
           riskLevel: 'low'
         }
       ]);
       
-      setQueryResult({ error: 'Failed to run RAG queries' });
+      setQueryResult({ error: getApiErrorMessage(error) });
       setLoading(false);
     }
   };

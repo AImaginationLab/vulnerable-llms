@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { getApiErrorMessage } from '../utils/apiErrors';
 
 const AutoAttackPage = () => {
   const [isRunning, setIsRunning] = useState(false);
@@ -49,7 +50,7 @@ const AutoAttackPage = () => {
       const response = await axios.get('/api/v1/2025/promptfoo/test');
       setPromptfooStatus(response.data);
     } catch (error) {
-      setPromptfooStatus({ installed: false, error: 'Failed to check status' });
+      setPromptfooStatus({ installed: false, error: getApiErrorMessage(error) });
     }
   };
 

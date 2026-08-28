@@ -22,9 +22,9 @@ class VulnerabilityType(str, Enum):
 class PromptType(str, Enum):
     """Prompt complexity types for LLM10 resource consumption."""
     SIMPLE = "simple"
-    COMPLEX = "complex"
-    RECURSIVE = "recursive"
-    INFINITE = "infinite"
+    LONG_TEXT = "long_text"
+    COMPLEX_REASONING = "complex_reasoning"
+    RECURSIVE_GENERATION = "recursive_generation"
 
 
 class RiskLevel(str, Enum):

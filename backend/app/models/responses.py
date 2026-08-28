@@ -88,18 +88,11 @@ class LLM09Response(BaseResponse):
     warning: str = Field(..., description="Information warning")
 
 
-class LLM10Response(BaseResponse):
+class LLM10Response(VulnerabilityResponse):
     """LLM10 unbounded consumption response."""
-    llm_output: str = Field(..., description="LLM response text")
-    prompt_type: str = Field(..., description="Prompt type used")
-    processing_time_seconds: float = Field(..., description="Processing time in seconds")
-    token_count: int = Field(..., description="Token count in response")
-    character_count: int = Field(..., description="Character count in response")
-    consumption_score: float = Field(..., description="Resource consumption score")
-    risk_level: RiskLevel = Field(..., description="Resource consumption risk level")
-    resource_metrics: Dict[str, float] = Field(..., description="Simulated resource metrics")
-    warnings: List[Optional[str]] = Field(default_factory=list, description="Resource warnings")
-    recommendation: str = Field(..., description="Resource management recommendation")
+    status: str = Field(..., description="Request status")
+    response_time_ms: int = Field(..., description="End-to-end response time in milliseconds")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Prompt size, type and resource impact")
 
 
 class AutoAttackResponse(BaseResponse):
@@ -150,6 +143,9 @@ class ReadinessResponse(HealthResponse):
     """Extended readiness check response."""
     rag_available: bool = Field(..., description="RAG system availability")
     rag_loading: bool = Field(..., description="RAG system loading status")
+    ollama_available: bool = Field(False, description="Whether Ollama answered on startup")
+    models_ready: bool = Field(False, description="Whether all configured models are pulled")
+    models: List[str] = Field(default_factory=list, description="Models the app is configured to use")
 
 
 class RAGQueryResponse(BaseResponse):
