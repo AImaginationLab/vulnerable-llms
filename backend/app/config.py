@@ -29,6 +29,18 @@ class Settings(BaseSettings):
     
     # External services
     ollama_host: str = "http://ollama:11434"
+    ollama_model: str = Field(
+        default="llama3.2:1b",
+        description="Chat model used by the demos (set via OLLAMA_MODEL)"
+    )
+    ollama_tool_model: str = Field(
+        default="qwen3:0.6b",
+        description="Tool-calling model used by the LLM06 demo (set via OLLAMA_TOOL_MODEL)"
+    )
+    ollama_auto_pull: bool = Field(
+        default=True,
+        description="Pull the configured models from Ollama on startup (set via OLLAMA_AUTO_PULL)"
+    )
     
     # Database
     chroma_persist_directory: str = "./chroma_db"
@@ -45,6 +57,11 @@ class Settings(BaseSettings):
     max_request_size: int = 10 * 1024 * 1024  # 10MB
     request_timeout: int = 90  # Increased for detailed injection analysis prompt
     
+    @property
+    def ollama_models(self) -> list[str]:
+        """Distinct models the app needs, in pull order."""
+        return list(dict.fromkeys([self.ollama_model, self.ollama_tool_model]))
+
     @property
     def is_production(self) -> bool:
         """Check if running in production mode."""

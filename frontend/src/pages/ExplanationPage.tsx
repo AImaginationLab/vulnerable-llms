@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { getApiErrorMessage } from '../utils/apiErrors';
 import ReactMarkdown from 'react-markdown';
 
 const ExplanationPage = ({ vulnerabilityId }) => {
@@ -13,10 +14,10 @@ const ExplanationPage = ({ vulnerabilityId }) => {
         const response = await axios.get(
           `/api/v1/2025/content/${vulnerabilityId}`
         );
-        setContent(response.data.content);
+        setContent(response.data);
       } catch (error) {
         console.error('Error fetching content:', error);
-        setError('Failed to load content');
+        setError(getApiErrorMessage(error));
       } finally {
         setLoading(false);
       }

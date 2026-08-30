@@ -2,7 +2,12 @@
 Test configuration and fixtures for backend tests.
 """
 
+import os
 import pytest
+
+# Tests must never reach out to a real Ollama during app startup
+os.environ.setdefault("OLLAMA_AUTO_PULL", "false")
+
 from fastapi.testclient import TestClient
 from unittest.mock import patch
 from app.main import app, create_app

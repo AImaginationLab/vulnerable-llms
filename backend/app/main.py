@@ -10,9 +10,9 @@ import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 # Add backend directory to Python path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -21,7 +21,9 @@ from .config import settings
 from .middleware.cors import add_cors_middleware
 from .middleware.logging import LoggingMiddleware
 from .middleware.error_handling import ErrorHandlingMiddleware, global_exception_handler
-from .dependencies import cleanup_services
+from .dependencies import cleanup_services, get_ollama_service
+from .services.ollama import OllamaError
+from .utils.helpers import create_timestamp
 from .routers import (
     health_router,
     vulnerabilities_router,
@@ -127,6 +129,46 @@ async def load_heavy_components(app: FastAPI):
         app.state.rag_loading = False
 
 
+async def ensure_models(app: FastAPI):
+    """Pull the configured Ollama models in the background so first use doesn't 404."""
+    app.state.ollama_available = False
+    app.state.models_ready = False
+
+    ollama = await get_ollama_service()
+    if not await ollama.test_connection():
+        logger.warning(f"⚠️ Ollama not reachable at {settings.ollama_host}; demos will fail until it is up")
+        return
+    app.state.ollama_available = True
+
+    all_ready = True
+    for model in settings.ollama_models:
+        all_ready = await ollama.pull_model(model) and all_ready
+    app.state.models_ready = all_ready
+    if all_ready:
+        logger.info(f"✅ Ollama models ready: {', '.join(settings.ollama_models)}")
+    else:
+        logger.warning("⚠️ Some Ollama models could not be pulled; see errors above")
+
+
+def get_static_dir() -> Path:
+    """Built frontend location: backend/static, regardless of the working directory."""
+    return Path(__file__).resolve().parent.parent / "static"
+
+
+async def ollama_error_handler(request: Request, exc: OllamaError) -> JSONResponse:
+    """Surface LLM backend failures as 503 instead of returning the error text as a model answer."""
+    logger.error(f"🚨 LLM backend unavailable for {request.method} {request.url.path}: {exc}")
+    return JSONResponse(
+        status_code=503,
+        content={
+            "error": "LLM backend unavailable",
+            "detail": str(exc),
+            "ollama_host": settings.ollama_host,
+            "timestamp": create_timestamp(),
+        },
+    )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager."""
@@ -138,9 +180,15 @@ async def lifespan(app: FastAPI):
     # Initialize app state
     app.state.rag_available = False
     app.state.rag_loading = False
+    app.state.ollama_available = False
+    app.state.models_ready = False
 
     # Start heavy component loading in background (don't await!)
     asyncio.create_task(load_heavy_components(app))
+    if settings.ollama_auto_pull:
+        asyncio.create_task(ensure_models(app))
+    else:
+        logger.info("⏭️ OLLAMA_AUTO_PULL disabled; skipping model pull")
     
     logger.info("🎯 All vulnerability endpoints loaded and ready")
     logger.info("📚 Content loader initialized")
@@ -176,6 +224,7 @@ def create_app() -> FastAPI:
     app.add_middleware(ErrorHandlingMiddleware)
     
     # Add global exception handler as backup
+    app.add_exception_handler(OllamaError, ollama_error_handler)
     app.add_exception_handler(Exception, global_exception_handler)
     
     logger.info("Middleware configured successfully")
@@ -191,7 +240,7 @@ def create_app() -> FastAPI:
     
     # Serve static files in production
     if settings.is_production:
-        static_dir = Path(os.getcwd()) / "backend" / "static"
+        static_dir = get_static_dir()
         if static_dir.is_dir():
             app.mount("/assets", StaticFiles(directory=str(static_dir / "assets")), name="assets")
             logger.info(f"Static files mounted from {static_dir}")

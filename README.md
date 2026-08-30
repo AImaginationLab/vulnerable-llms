@@ -166,7 +166,11 @@ pip install -r requirements.txt
 - Backend health check passes in ~7 seconds (FastAPI starts quickly)
 - RAG components (ML models) load asynchronously in background (~10 more seconds)
 - Frontend starts immediately after backend health check passes
-- First Ollama startup downloads LLM model (~1.5GB), subsequent runs are faster
+- On startup the backend pulls the configured Ollama models (`llama3.2:1b`, `qwen3:0.6b`, ~1.5GB total); check `http://localhost:5000/health/ready` for `models_ready: true` before running demos
+
+**"LLM backend unavailable" / Ollama 404 errors:**
+- The model isn't installed yet. Wait for the startup pull to finish, or run `docker compose exec ollama ollama pull llama3.2:1b`
+- To use different models, set `OLLAMA_MODEL` / `OLLAMA_TOOL_MODEL` (see `.env.example`); set `OLLAMA_AUTO_PULL=false` to skip the automatic pull
 
 **If Docker startup fails:**
 - Ensure you have at least 8GB RAM available

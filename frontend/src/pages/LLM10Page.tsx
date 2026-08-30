@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { getApiErrorMessage } from '../utils/apiErrors';
 import { VulnerabilityPageLayout } from '../components/layout';
 import { Card, Alert, Button } from '../components/ui';
 
@@ -29,7 +30,7 @@ const LLM10Page = () => {
       });
       setResult(response.data);
     } catch (error) {
-      setResult({ error: 'Failed to run demo' });
+      setResult({ error: getApiErrorMessage(error) });
     }
     
     setLoading(false);
@@ -66,7 +67,7 @@ const LLM10Page = () => {
         }
       });
     } catch (error) {
-      setResult({ error: 'Failed to run comparison' });
+      setResult({ error: getApiErrorMessage(error) });
     }
     setLoading(false);
   };
